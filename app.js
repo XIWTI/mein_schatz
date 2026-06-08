@@ -1,6 +1,7 @@
 "use strict";
 
 const STORAGE_KEY = "love-arcade-progress-v2";
+const FLAG_MOOD_CACHE_KEY = "flag-mood-countries-v1";
 const TODAY = new Date().toISOString().slice(0, 10);
 const SECRET_GIFT_GOAL = 20000;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -14,6 +15,7 @@ const HEART_PROMOS = {
   "29.11.2025": 5000,
   "14.02.2026": 5000,
   "22.05.2026": 5000,
+  "02.06.2026": 25000,
   "светланочка": 100,
 };
 
@@ -25,6 +27,7 @@ const TRACKS = [
   { type: "file", title: "Flxweroff - Killswitch", src: "music/Flxweroff - Killswitch.mp3" },
   { type: "file", title: "A Normal Life", src: "music/02 A Normal Life.mp3" },
 ];
+let customTrackSeed = 1;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
@@ -46,7 +49,7 @@ const defaultState = {
   lastReward: "",
   trackIndex: 0,
   volume: 0.55,
-  sfxVolume: 0.7,
+  sfxVolume: 0.82,
   musicEnabled: true,
   sfxEnabled: true,
   shuffleTracks: false,
@@ -78,6 +81,7 @@ let mathRushState = null;
 let nonMathGameState = null;
 let activeGame = null;
 let audioCtx = null;
+let chessMoveAudio = null;
 let pendingResult = null;
 
 const achievements = [
@@ -102,7 +106,7 @@ const shopItems = [
   { id: "bracelets", title: "Парные браслеты", price: 25000, limit: 1 },
   { id: "handmade", title: "Подарок своими руками", price: 50000, limit: 1 },
   { id: "cook", title: "Приготовить что-то вкусное для тебя", price: 75000, limit: 1 },
-  { id: "wish", title: "Желание", price: 100000, limit: 3 },
+  { id: "wish", title: "Желание", price: 100000, limit: 1 },
   { id: "mom", title: "Знакомство с мамой", price: 250000, limit: 1 },
 ];
 
@@ -130,14 +134,16 @@ const memoryLevels = {
 };
 
 const chessLevelLabels = {
-  1: "1 новичок",
-  2: "2 ученик",
-  3: "3 средний",
-  4: "4 уверенный",
-  5: "5 эксперт",
-  6: "6 мастер",
-  7: "7 гроссмейстер",
-  8: "8 кошмар",
+  1: "1 · 250 elo",
+  2: "2 · 500 elo",
+  3: "3 · 750 elo",
+  4: "4 · 1000 elo",
+  5: "5 · 1250 elo",
+  6: "6 · 1500 elo",
+  7: "7 · 1750 elo",
+  8: "8 · 2000 elo",
+  9: "9 · 2250 elo",
+  10: "10 · 2500 elo",
 };
 
 const chessStyles = {
@@ -157,6 +163,118 @@ const simonPads = [
   { id: 1, label: "Солнце", color: "#f6c766" },
   { id: 2, label: "Мята", color: "#79e2c2" },
   { id: 3, label: "Небо", color: "#8ec5ff" },
+];
+
+const simonDifficulties = {
+  easy: { label: "Лёгкий", maxRounds: 6, startLength: 2, stepDelay: 620, pulseMs: 370, rewardBase: 420 },
+  normal: { label: "Средний", maxRounds: 8, startLength: 2, stepDelay: 520, pulseMs: 320, rewardBase: 680 },
+  hard: { label: "Сложный", maxRounds: 10, startLength: 3, stepDelay: 430, pulseMs: 260, rewardBase: 980 },
+};
+
+const irregularVerbPool = [
+  { base: "be", past: ["was", "were"], participle: ["been"] },
+  { base: "beat", past: ["beat"], participle: ["beaten"] },
+  { base: "become", past: ["became"], participle: ["become"] },
+  { base: "begin", past: ["began"], participle: ["begun"] },
+  { base: "bend", past: ["bent"], participle: ["bent"] },
+  { base: "bet", past: ["bet"], participle: ["bet"] },
+  { base: "bind", past: ["bound"], participle: ["bound"] },
+  { base: "bite", past: ["bit"], participle: ["bitten"] },
+  { base: "bleed", past: ["bled"], participle: ["bled"] },
+  { base: "blow", past: ["blew"], participle: ["blown"] },
+  { base: "break", past: ["broke"], participle: ["broken"] },
+  { base: "breed", past: ["bred"], participle: ["bred"] },
+  { base: "bring", past: ["brought"], participle: ["brought"] },
+  { base: "broadcast", past: ["broadcast"], participle: ["broadcast"] },
+  { base: "build", past: ["built"], participle: ["built"] },
+  { base: "burn", past: ["burned", "burnt"], participle: ["burned", "burnt"] },
+  { base: "buy", past: ["bought"], participle: ["bought"] },
+  { base: "catch", past: ["caught"], participle: ["caught"] },
+  { base: "choose", past: ["chose"], participle: ["chosen"] },
+  { base: "come", past: ["came"], participle: ["come"] },
+  { base: "cost", past: ["cost"], participle: ["cost"] },
+  { base: "cut", past: ["cut"], participle: ["cut"] },
+  { base: "deal", past: ["dealt"], participle: ["dealt"] },
+  { base: "dig", past: ["dug"], participle: ["dug"] },
+  { base: "do", past: ["did"], participle: ["done"] },
+  { base: "draw", past: ["drew"], participle: ["drawn"] },
+  { base: "dream", past: ["dreamed", "dreamt"], participle: ["dreamed", "dreamt"] },
+  { base: "drink", past: ["drank"], participle: ["drunk"] },
+  { base: "drive", past: ["drove"], participle: ["driven"] },
+  { base: "eat", past: ["ate"], participle: ["eaten"] },
+  { base: "fall", past: ["fell"], participle: ["fallen"] },
+  { base: "feed", past: ["fed"], participle: ["fed"] },
+  { base: "feel", past: ["felt"], participle: ["felt"] },
+  { base: "fight", past: ["fought"], participle: ["fought"] },
+  { base: "find", past: ["found"], participle: ["found"] },
+  { base: "fit", past: ["fit", "fitted"], participle: ["fit", "fitted"] },
+  { base: "fly", past: ["flew"], participle: ["flown"] },
+  { base: "forget", past: ["forgot"], participle: ["forgotten"] },
+  { base: "forgive", past: ["forgave"], participle: ["forgiven"] },
+  { base: "freeze", past: ["froze"], participle: ["frozen"] },
+  { base: "get", past: ["got"], participle: ["got", "gotten"] },
+  { base: "give", past: ["gave"], participle: ["given"] },
+  { base: "go", past: ["went"], participle: ["gone"] },
+  { base: "grow", past: ["grew"], participle: ["grown"] },
+  { base: "hang", past: ["hung"], participle: ["hung"] },
+  { base: "have", past: ["had"], participle: ["had"] },
+  { base: "hear", past: ["heard"], participle: ["heard"] },
+  { base: "hide", past: ["hid"], participle: ["hidden"] },
+  { base: "hit", past: ["hit"], participle: ["hit"] },
+  { base: "hold", past: ["held"], participle: ["held"] },
+  { base: "hurt", past: ["hurt"], participle: ["hurt"] },
+  { base: "keep", past: ["kept"], participle: ["kept"] },
+  { base: "know", past: ["knew"], participle: ["known"] },
+  { base: "lay", past: ["laid"], participle: ["laid"] },
+  { base: "lead", past: ["led"], participle: ["led"] },
+  { base: "learn", past: ["learned", "learnt"], participle: ["learned", "learnt"] },
+  { base: "leave", past: ["left"], participle: ["left"] },
+  { base: "lend", past: ["lent"], participle: ["lent"] },
+  { base: "let", past: ["let"], participle: ["let"] },
+  { base: "lie", past: ["lay"], participle: ["lain"] },
+  { base: "light", past: ["lit", "lighted"], participle: ["lit", "lighted"] },
+  { base: "lose", past: ["lost"], participle: ["lost"] },
+  { base: "make", past: ["made"], participle: ["made"] },
+  { base: "mean", past: ["meant"], participle: ["meant"] },
+  { base: "meet", past: ["met"], participle: ["met"] },
+  { base: "pay", past: ["paid"], participle: ["paid"] },
+  { base: "put", past: ["put"], participle: ["put"] },
+  { base: "read", past: ["read"], participle: ["read"] },
+  { base: "ride", past: ["rode"], participle: ["ridden"] },
+  { base: "ring", past: ["rang"], participle: ["rung"] },
+  { base: "rise", past: ["rose"], participle: ["risen"] },
+  { base: "run", past: ["ran"], participle: ["run"] },
+  { base: "say", past: ["said"], participle: ["said"] },
+  { base: "see", past: ["saw"], participle: ["seen"] },
+  { base: "sell", past: ["sold"], participle: ["sold"] },
+  { base: "send", past: ["sent"], participle: ["sent"] },
+  { base: "set", past: ["set"], participle: ["set"] },
+  { base: "shake", past: ["shook"], participle: ["shaken"] },
+  { base: "shine", past: ["shone"], participle: ["shone"] },
+  { base: "shoot", past: ["shot"], participle: ["shot"] },
+  { base: "show", past: ["showed"], participle: ["shown", "showed"] },
+  { base: "shut", past: ["shut"], participle: ["shut"] },
+  { base: "sing", past: ["sang"], participle: ["sung"] },
+  { base: "sit", past: ["sat"], participle: ["sat"] },
+  { base: "sleep", past: ["slept"], participle: ["slept"] },
+  { base: "smell", past: ["smelled", "smelt"], participle: ["smelled", "smelt"] },
+  { base: "speak", past: ["spoke"], participle: ["spoken"] },
+  { base: "spend", past: ["spent"], participle: ["spent"] },
+  { base: "stand", past: ["stood"], participle: ["stood"] },
+  { base: "steal", past: ["stole"], participle: ["stolen"] },
+  { base: "stick", past: ["stuck"], participle: ["stuck"] },
+  { base: "swear", past: ["swore"], participle: ["sworn"] },
+  { base: "swim", past: ["swam"], participle: ["swum"] },
+  { base: "take", past: ["took"], participle: ["taken"] },
+  { base: "teach", past: ["taught"], participle: ["taught"] },
+  { base: "tell", past: ["told"], participle: ["told"] },
+  { base: "think", past: ["thought"], participle: ["thought"] },
+  { base: "throw", past: ["threw"], participle: ["thrown"] },
+  { base: "understand", past: ["understood"], participle: ["understood"] },
+  { base: "wake", past: ["woke"], participle: ["woken"] },
+  { base: "wear", past: ["wore"], participle: ["worn"] },
+  { base: "win", past: ["won"], participle: ["won"] },
+  { base: "write", past: ["wrote"], participle: ["written"] },
 ];
 
 const codebreakerPalette = [
@@ -197,13 +315,15 @@ const mathRushSettings = {
 
 const nonMathArcadeGames = [
   { id: "pathFinder", icon: "🗺", title: "Path Finder", subtitle: "Маршрут по шагам", mode: "pathFinder", rewardBase: 240, rewardStep: 54, timeLimit: 55 },
-  { id: "directionTap", icon: "🧭", title: "Direction Tap", subtitle: "Ориентация и реакция", mode: "directionTap", rewardBase: 220, rewardStep: 48, timeLimit: 50 },
+  { id: "directionTap", icon: "🧭", title: "Direction Tap", subtitle: "Ориентация и реакция", mode: "directionTap", rewardBase: 120, rewardStep: 18, timeLimit: 50 },
   { id: "flagMood", icon: "🏁", title: "Flag Mood", subtitle: "Флаги, страны и столицы", mode: "flagMood", rewardBase: 260, rewardStep: 56, timeLimit: 60 },
 ];
 
 const nonMathGameMap = Object.fromEntries(nonMathArcadeGames.map((game) => [game.id, game]));
 
-const flagMoodRegions = {
+let irregularVerbState = null;
+
+let flagMoodRegions = {
   europe: {
     label: "Европа",
     countries: [
@@ -261,6 +381,105 @@ const flagMoodRegions = {
   },
 };
 
+let flagMoodLoaded = false;
+const flagMoodRegionLabels = {
+  world: "Все страны мира",
+  europe: "Европа",
+  asia: "Азия",
+  africa: "Африка",
+  northAmerica: "Северная Америка",
+  southAmerica: "Южная Америка",
+  oceania: "Океания",
+  antarctica: "Антарктика",
+};
+
+function flagFromCountryCode(code) {
+  return code
+    .toUpperCase()
+    .split("")
+    .map((char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
+    .join("");
+}
+
+function mapCountryToFlagRegion(regionRaw = "", subregionRaw = "") {
+  const region = regionRaw.toLowerCase();
+  const subregion = subregionRaw.toLowerCase();
+  if (region === "europe") return "europe";
+  if (region === "asia") return "asia";
+  if (region === "africa") return "africa";
+  if (region === "oceania") return "oceania";
+  if (region === "antarctic") return "antarctica";
+  if (region === "americas") {
+    if (subregion.includes("south")) return "southAmerica";
+    return "northAmerica";
+  }
+  return "world";
+}
+
+async function loadFlagMoodCountries() {
+  if (flagMoodLoaded) return;
+  flagMoodLoaded = true;
+  try {
+    const cachedRaw = localStorage.getItem(FLAG_MOOD_CACHE_KEY);
+    if (cachedRaw) {
+      const cached = JSON.parse(cachedRaw);
+      if (cached && typeof cached === "object" && cached.world?.countries?.length >= 150) {
+        flagMoodRegions = cached;
+      }
+    }
+  } catch {}
+  try {
+    let regionNames = null;
+    try {
+      regionNames = new Intl.DisplayNames(["ru"], { type: "region" });
+    } catch {}
+    const response = await fetch("https://restcountries.com/v3.1/all?fields=cca2,capital,region,subregion,name,translations");
+    if (!response.ok) return;
+    const payload = await response.json();
+    const buckets = {
+      world: [],
+      europe: [],
+      asia: [],
+      africa: [],
+      northAmerica: [],
+      southAmerica: [],
+      oceania: [],
+      antarctica: [],
+    };
+    const used = new Set();
+    payload.forEach((item) => {
+      const code = String(item.cca2 || "").toUpperCase();
+      if (!/^[A-Z]{2}$/.test(code) || used.has(code)) return;
+      used.add(code);
+      const country =
+        item?.translations?.rus?.common
+        || item?.name?.common
+        || regionNames?.of(code)
+        || code;
+      if (!country || country === code) return;
+      const capital = Array.isArray(item.capital) && item.capital[0] ? item.capital[0] : country;
+      const row = { flag: flagFromCountryCode(code), country, capital };
+      const key = mapCountryToFlagRegion(item.region || "", item.subregion || "");
+      buckets.world.push(row);
+      if (buckets[key]) buckets[key].push(row);
+    });
+    Object.values(buckets).forEach((list) => list.sort((a, b) => a.country.localeCompare(b.country, "ru")));
+    if (buckets.world.length >= 150) {
+      const result = {};
+      Object.entries(buckets).forEach(([key, countries]) => {
+        if (countries.length >= 4) {
+          const labelBase = flagMoodRegionLabels[key] || key;
+          result[key] = { label: `${labelBase} (${countries.length})`, countries };
+        }
+      });
+      flagMoodRegions = result;
+      try {
+        localStorage.setItem(FLAG_MOOD_CACHE_KEY, JSON.stringify(result));
+      } catch {}
+    }
+  } catch {}
+}
+
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || JSON.parse(localStorage.getItem("love-arcade-progress-v1"));
@@ -285,6 +504,10 @@ function saveState() {
 
 function uid(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function formatHearts(value) {
+  return Number(value || 0).toLocaleString("ru-RU").replace(/\u00A0/g, " ");
 }
 
 function addReward(title, source, options = {}) {
@@ -354,6 +577,9 @@ function init() {
   setupMusic();
   setupAmbient();
   setupServiceWorker();
+  loadFlagMoodCountries().then(() => {
+    if (activeGame && nonMathGameMap[activeGame]) drawNonMathArcade();
+  });
   applyTimeMode();
   initFortuneWheel();
   if (state.accepted) openApp();
@@ -431,7 +657,7 @@ function openApp() {
 
 function setupServiceWorker() {
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("sw.js?v=7").catch(() => {});
+    navigator.serviceWorker.register("sw.js?v=14").catch(() => {});
   }
 }
 
@@ -483,29 +709,47 @@ function ensureAudioContext() {
   return audioCtx;
 }
 
+function playChessMoveAudio() {
+  if (!state.sfxEnabled) return;
+  try {
+    if (!chessMoveAudio) {
+      chessMoveAudio = new Audio("music/capture.mp3");
+      chessMoveAudio.preload = "auto";
+    }
+    chessMoveAudio.pause();
+    chessMoveAudio.currentTime = 0;
+    chessMoveAudio.volume = Math.min(1, Math.max(0, state.sfxVolume * 0.95));
+    chessMoveAudio.play().catch(() => {});
+  } catch {}
+}
+
 function playSfx(type) {
   if (!state.sfxEnabled) return;
   const ctx = ensureAudioContext();
   const now = ctx.currentTime;
-  const gain = ctx.createGain();
-  const osc = ctx.createOscillator();
-  const config = {
-    click: [480, 0.05, "sine", 0.035],
-    tick: [720, 0.04, "triangle", 0.03],
-    move: [360, 0.08, "sine", 0.045],
-    match: [660, 0.12, "triangle", 0.06],
-    error: [160, 0.14, "sawtooth", 0.035],
-    win: [880, 0.22, "triangle", 0.08],
-  }[type] || [440, 0.08, "sine", 0.04];
-  osc.frequency.setValueAtTime(config[0], now);
-  if (type === "win") osc.frequency.exponentialRampToValueAtTime(config[0] * 1.65, now + config[1]);
-  if (type === "error") osc.frequency.exponentialRampToValueAtTime(80, now + config[1]);
-  osc.type = config[2];
-  gain.gain.setValueAtTime(config[3] * state.sfxVolume, now);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + config[1]);
-  osc.connect(gain).connect(ctx.destination);
-  osc.start(now);
-  osc.stop(now + config[1] + 0.02);
+  const profile = {
+    click: { notes: [560], dur: 0.06, wave: "triangle", vol: 0.048 },
+    tick: { notes: [700, 880], dur: 0.08, wave: "triangle", vol: 0.045 },
+    move: { notes: [430, 540], dur: 0.12, wave: "triangle", vol: 0.058 },
+    match: { notes: [620, 830], dur: 0.14, wave: "triangle", vol: 0.07 },
+    error: { notes: [210, 145], dur: 0.16, wave: "sawtooth", vol: 0.05 },
+    win: { notes: [520, 660, 880], dur: 0.28, wave: "triangle", vol: 0.095 },
+  }[type] || { notes: [460], dur: 0.08, wave: "sine", vol: 0.052 };
+  const loudnessBoost = 0.8 + state.sfxVolume * 1.05;
+  profile.notes.forEach((frequency, index) => {
+    const startAt = now + index * 0.028;
+    const gain = ctx.createGain();
+    const osc = ctx.createOscillator();
+    osc.type = profile.wave;
+    osc.frequency.setValueAtTime(frequency, startAt);
+    if (type === "win") osc.frequency.exponentialRampToValueAtTime(frequency * 1.08, startAt + profile.dur * 0.8);
+    if (type === "error") osc.frequency.exponentialRampToValueAtTime(Math.max(70, frequency * 0.55), startAt + profile.dur * 0.85);
+    gain.gain.setValueAtTime(profile.vol * loudnessBoost, startAt);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + profile.dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(startAt);
+    osc.stop(startAt + profile.dur + 0.03);
+  });
 }
 
 function setupMusic() {
@@ -559,6 +803,11 @@ function setupMusic() {
     state.sfxEnabled = event.target.checked;
     saveState();
   });
+  $("#customTrackInput")?.addEventListener("change", (event) => {
+    const files = Array.from(event.target.files || []);
+    addCustomTracks(files);
+    event.target.value = "";
+  });
   $("#resetProgressBtn").addEventListener("click", resetProgress);
   audio.addEventListener("ended", () => {
     if (!state.repeatTrack) changeTrack(1, true);
@@ -588,6 +837,28 @@ function selectTrack(index, autoplay = true) {
   renderMusic();
 }
 
+function addCustomTracks(files) {
+  const audioFiles = files.filter((file) => {
+    if (!file) return false;
+    const type = String(file.type || "");
+    if (type.startsWith("audio/")) return true;
+    return /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(file.name || "");
+  });
+  if (!audioFiles.length) return;
+  const startIndex = TRACKS.length;
+  audioFiles.forEach((file) => {
+    const src = URL.createObjectURL(file);
+    const cleanName = file.name.replace(/\.[a-z0-9]+$/i, "");
+    TRACKS.push({
+      type: "custom",
+      title: cleanName || `Мой трек ${customTrackSeed}`,
+      src,
+    });
+    customTrackSeed += 1;
+  });
+  selectTrack(startIndex, true);
+}
+
 function applyTimeMode() {
   const hour = new Date().getHours();
   const isNight = hour >= 20 || hour < 6;
@@ -602,11 +873,11 @@ function applyTimeMode() {
 function addHearts(amount, reason) {
   const before = state.hearts;
   state.hearts += amount;
-  state.lastReward = `+${amount} hearts · ${reason}`;
+  state.lastReward = `+${formatHearts(amount)} hearts · ${reason}`;
   state.dailies.earnHearts += amount;
   saveState();
   animateCounter(before, state.hearts);
-  showReward(`+${amount} hearts · ${reason}`);
+  showReward(`+${formatHearts(amount)} hearts · ${reason}`);
   renderAll();
   if (state.hearts >= SECRET_GIFT_GOAL && !state.secretGiftSeen) {
     state.secretGiftSeen = true;
@@ -625,7 +896,8 @@ function animateCounter(from, to) {
   function frame(now) {
     const t = Math.min(1, (now - start) / duration);
     const value = Math.round(from + (to - from) * (1 - Math.pow(1 - t, 3)));
-    $("#heartCount").textContent = `${value} hearts`;
+    $("#heartCount").textContent = `${formatHearts(value)} hearts`;
+    $("#orbPercent").textContent = formatHearts(value);
     if (t < 1) requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -716,8 +988,8 @@ function renderAll() {
 }
 
 function renderProgress() {
-  $("#heartCount").textContent = `${state.hearts} hearts`;
-  $("#orbPercent").textContent = `${state.hearts}`;
+  $("#heartCount").textContent = `${formatHearts(state.hearts)} hearts`;
+  $("#orbPercent").textContent = formatHearts(state.hearts);
   $("#lastReward").textContent = state.lastReward || "Пока наград нет. Самое приятное впереди.";
 }
 
@@ -788,7 +1060,8 @@ function renderGift() {
     $("#giftText").textContent = "Забери его там, и приложение сохранит дату и время этого момента.";
   }
   $("#giftStamp").textContent = state.giftClaimedAt ? `Получено: ${new Date(state.giftClaimedAt).toLocaleString()}` : "";
-  $("#secretGiftPanel").classList.toggle("hidden", state.hearts < SECRET_GIFT_GOAL);
+  const hideSecretText = state.hearts < SECRET_GIFT_GOAL || state.secretMessagesUnlocked;
+  $("#secretGiftPanel").classList.toggle("hidden", hideSecretText);
 }
 
 function renderMusic() {
@@ -806,7 +1079,7 @@ function renderMusic() {
   $("#messagesTabBtn").classList.toggle("hidden", !state.secretMessagesUnlocked);
   $("#trackList").innerHTML = TRACKS.map((item, index) => `
     <button class="track-option ${index === state.trackIndex ? "active" : ""}" data-track="${index}">
-      ${item.title}
+      ${item.type === "custom" ? "🎵 " : ""}${item.title}
     </button>
   `).join("");
   $$("[data-track]").forEach((btn) => btn.addEventListener("click", () => selectTrack(Number(btn.dataset.track))));
@@ -1051,6 +1324,7 @@ function applyPromo() {
     state.secretMessagesUnlocked = true;
     saveState();
     renderMusic();
+    renderGift();
     setSettingsTab("messages");
     $("#promoStatus").textContent = "Открыта вкладка сообщений.";
     input.value = "";
@@ -1085,6 +1359,7 @@ function openGame(game) {
   if (game === "codebreaker") renderCodebreaker();
   if (game === "lightsout") renderLightsOut(5);
   if (game === "mathrush") renderMathRush();
+  if (game === "irregularverbs") renderIrregularVerbs();
   if (nonMathGameMap[game]) renderNonMathArcade(game);
 }
 
@@ -1345,19 +1620,38 @@ function finishQuiz() {
     `<p class="muted">Результат сохранён. Эту викторину нельзя пройти повторно ради hearts.</p>`;
 }
 
-function randomSimonPad() {
-  return Math.floor(Math.random() * simonPads.length);
+function randomSimonPad(exclude = null) {
+  let value = Math.floor(Math.random() * simonPads.length);
+  if (exclude === null) return value;
+  let guard = 0;
+  while (value === exclude && guard < 12) {
+    value = Math.floor(Math.random() * simonPads.length);
+    guard += 1;
+  }
+  return value;
 }
 
-function renderSimon() {
+function getSimonDifficulty(level = "normal") {
+  return simonDifficulties[level] || simonDifficulties.normal;
+}
+
+function renderSimon(level = simonState?.difficulty || "normal") {
+  const difficulty = getSimonDifficulty(level);
+  const sequence = [randomSimonPad()];
+  while (sequence.length < difficulty.startLength) {
+    sequence.push(randomSimonPad(sequence[sequence.length - 1]));
+  }
   simonState = {
-    sequence: [randomSimonPad()],
+    difficulty: level,
+    sequence,
     playerIndex: 0,
     round: 1,
-    maxRounds: 8,
+    maxRounds: difficulty.maxRounds,
     showing: false,
     locked: true,
+    readyToContinue: false,
     over: false,
+    pressCount: 0,
     timers: [],
     status: "Нажми «Показать последовательность» и повтори её без ошибок.",
   };
@@ -1365,15 +1659,22 @@ function renderSimon() {
 }
 
 function drawSimon() {
+  const difficulty = getSimonDifficulty(simonState.difficulty);
+  const actionLabel = simonState.readyToContinue ? "Продолжить" : "Показать последовательность";
+  const actionClass = simonState.readyToContinue ? "soft-btn simon-continue-btn" : "primary-btn";
   $("#gameStage").innerHTML = stageShell(
     "Simon Pulse",
-    `раунд ${simonState.round}/${simonState.maxRounds}`,
+    `раунд ${simonState.round}/${simonState.maxRounds} · ${difficulty.label}`,
     `
+      <span class="simon-counter-badge">${simonState.pressCount}/${simonState.sequence.length}</span>
+      <div class="segmented">
+        ${Object.entries(simonDifficulties).map(([key, value]) => `<button class="chip ${simonState.difficulty === key ? "active" : ""}" data-simon-diff="${key}" ${simonState.showing ? "disabled" : ""}>${value.label}</button>`).join("")}
+      </div>
       <button class="soft-btn" id="restartSimon">Заново</button>
     `
   ) + `
     <div class="mini-game-panel simon-wrap">
-      <p class="muted">Запомни и повтори цветовую цепочку. Каждый раунд становится длиннее.</p>
+      <p class="muted">Повтори последовательность. Ошибка завершает раунд.</p>
       <div class="simon-grid">
         ${simonPads.map((pad) => `
           <button class="simon-pad" data-simon-pad="${pad.id}" style="--pad-color:${pad.color}" ${simonState.locked ? "disabled" : ""}>
@@ -1382,14 +1683,27 @@ function drawSimon() {
         `).join("")}
       </div>
       <div class="control-row">
-        <button id="showSimonSeq" class="primary-btn" ${simonState.showing || simonState.over ? "disabled" : ""}>Показать последовательность</button>
+        <button id="showSimonSeq" class="${actionClass}" ${simonState.showing || simonState.over ? "disabled" : ""}>${actionLabel}</button>
       </div>
       <p id="simonStatus" class="muted">${simonState.status}</p>
     </div>
   `;
-  $("#restartSimon").addEventListener("click", renderSimon);
-  $("#showSimonSeq").addEventListener("click", playSimonSequence);
+  $$("[data-simon-diff]").forEach((btn) => btn.addEventListener("click", () => {
+    if (simonState.showing) return;
+    renderSimon(btn.dataset.simonDiff);
+  }));
+  $("#restartSimon").addEventListener("click", () => renderSimon(simonState.difficulty));
+  $("#showSimonSeq").addEventListener("click", runSimonAction);
   $$("[data-simon-pad]").forEach((btn) => btn.addEventListener("click", () => pressSimonPad(Number(btn.dataset.simonPad))));
+}
+
+function runSimonAction() {
+  if (!simonState || simonState.showing || simonState.over) return;
+  if (simonState.readyToContinue) {
+    simonState.readyToContinue = false;
+    simonState.status = "Новый раунд. Смотри внимательно...";
+  }
+  playSimonSequence();
 }
 
 function flashSimonPad(id, pulseMs = 340) {
@@ -1402,20 +1716,23 @@ function flashSimonPad(id, pulseMs = 340) {
 
 function playSimonSequence() {
   if (!simonState || simonState.showing || simonState.over) return;
+  const difficulty = getSimonDifficulty(simonState.difficulty);
   stopRuntimeGames();
   simonState.showing = true;
   simonState.locked = true;
+  simonState.readyToContinue = false;
   simonState.playerIndex = 0;
+  simonState.pressCount = 0;
   simonState.status = "Смотри внимательно...";
   drawSimon();
   let delay = 260;
   simonState.sequence.forEach((id) => {
     const timer = setTimeout(() => {
-      flashSimonPad(id, 320);
+      flashSimonPad(id, difficulty.pulseMs);
       playSfx("tick");
     }, delay);
     simonState.timers.push(timer);
-    delay += 520;
+    delay += difficulty.stepDelay;
   });
   const finishTimer = setTimeout(() => {
     simonState.showing = false;
@@ -1428,33 +1745,190 @@ function playSimonSequence() {
 
 function pressSimonPad(id) {
   if (!simonState || simonState.locked || simonState.over) return;
+  const difficulty = getSimonDifficulty(simonState.difficulty);
   flashSimonPad(id, 220);
   const expected = simonState.sequence[simonState.playerIndex];
+  simonState.pressCount += 1;
   if (id !== expected) {
     simonState.over = true;
     simonState.locked = true;
-    simonState.status = "Ошибка. Попробуй ещё раз — память можно прокачать!";
+    simonState.status = `Ошибка на шаге ${simonState.pressCount}/${simonState.sequence.length}. Попробуй ещё раз!`;
     drawSimon();
     completeLoss();
     return;
   }
   playSfx("match");
   simonState.playerIndex += 1;
+  simonState.status = `Верно: ${simonState.playerIndex}/${simonState.sequence.length}`;
+  drawSimon();
   if (simonState.playerIndex < simonState.sequence.length) return;
   if (simonState.round >= simonState.maxRounds) {
     simonState.over = true;
     simonState.locked = true;
     simonState.status = "Идеально! Ты прошла все раунды.";
     drawSimon();
-    completeWin(880, "Simon Pulse");
+    const reward = difficulty.rewardBase + simonState.maxRounds * 90;
+    completeWin(reward, `Simon Pulse · ${difficulty.label}`);
     return;
   }
   simonState.round += 1;
-  simonState.sequence.push(randomSimonPad());
+  simonState.sequence.push(randomSimonPad(simonState.sequence[simonState.sequence.length - 1]));
   simonState.playerIndex = 0;
+  simonState.pressCount = 0;
   simonState.locked = true;
-  simonState.status = "Раунд пройден. Переходи к следующей последовательности.";
+  simonState.readyToContinue = true;
+  simonState.status = "Раунд пройден. Нажми «Продолжить».";
   drawSimon();
+}
+
+function normalizeVerbForm(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function nextIrregularVerbQuestion() {
+  const formsAll = [
+    { key: "past", label: "Past Simple" },
+    { key: "participle", label: "Past Participle" },
+  ];
+  const forms = irregularVerbState?.mode === "v2"
+    ? [formsAll[0]]
+    : irregularVerbState?.mode === "v3"
+      ? [formsAll[1]]
+      : formsAll;
+  let candidates = irregularVerbPool.filter((verb) => {
+    return forms.some((form) => !irregularVerbState.asked.includes(`${verb.base}:${form.key}`));
+  });
+  if (!candidates.length) {
+    irregularVerbState.asked = [];
+    candidates = [...irregularVerbPool];
+  }
+  const verb = candidates[randomInt(0, candidates.length - 1)];
+  const form = forms[randomInt(0, forms.length - 1)];
+  const signature = `${verb.base}:${form.key}`;
+  irregularVerbState.asked.push(signature);
+  const answers = Array.isArray(verb[form.key]) ? verb[form.key].map(normalizeVerbForm) : [normalizeVerbForm(verb[form.key])];
+  irregularVerbState.current = {
+    signature,
+    base: verb.base,
+    formLabel: form.label,
+    answers,
+  };
+}
+
+function renderIrregularVerbs() {
+  stopRuntimeGames();
+  irregularVerbState = {
+    mode: irregularVerbState?.mode || "mix",
+    phase: "setup",
+    lives: 5,
+    maxLives: 5,
+    score: 0,
+    answered: 0,
+    maxRounds: 30,
+    asked: [],
+    current: null,
+    over: false,
+    status: "Выбери режим и нажми «Играть». В раунде 30 вопросов и 5 жизней.",
+  };
+  drawIrregularVerbs();
+}
+
+function drawIrregularVerbs() {
+  const inSetup = irregularVerbState.phase === "setup";
+  $("#gameStage").innerHTML = stageShell(
+    "Irregular Verbs",
+    inSetup
+      ? "выбор режима"
+      : `жизни ${irregularVerbState.lives}/${irregularVerbState.maxLives} · ${irregularVerbState.answered}/${irregularVerbState.maxRounds}`,
+    `<button class="soft-btn" id="restartIrregular">Заново</button>`
+  ) + `
+    <div class="mini-game-panel mathrush-wrap">
+      ${inSetup ? `
+        <div class="segmented">
+          <button class="chip ${irregularVerbState.mode === "v2" ? "active" : ""}" data-verb-mode="v2">Только V2</button>
+          <button class="chip ${irregularVerbState.mode === "v3" ? "active" : ""}" data-verb-mode="v3">Только V3</button>
+          <button class="chip ${irregularVerbState.mode === "mix" ? "active" : ""}" data-verb-mode="mix">Микс</button>
+        </div>
+        <p class="muted">Выбери режим формы и начни раунд.</p>
+        <button id="startIrregular" class="primary-btn">Играть</button>
+      ` : `
+        <p class="muted">Инфинитив: <strong>${irregularVerbState.current?.base || "-"}</strong></p>
+        <p class="muted">Нужная форма: <strong>${irregularVerbState.current?.formLabel || "-"}</strong></p>
+        <div class="promo-row">
+          <input id="irregularInput" type="text" placeholder="Введи форму глагола" ${irregularVerbState.over ? "disabled" : ""} />
+          <button id="submitIrregular" class="primary-btn" ${irregularVerbState.over ? "disabled" : ""}>Ответить</button>
+        </div>
+      `}
+      <p class="muted">${irregularVerbState.status}</p>
+      <p class="muted">Правильных: ${irregularVerbState.score}</p>
+      ${irregularVerbState.over ? `<p class="muted">Игра завершена. Нажми «Заново» для новой попытки.</p>` : ""}
+    </div>
+  `;
+  $("#restartIrregular").addEventListener("click", renderIrregularVerbs);
+  $$("[data-verb-mode]").forEach((btn) => btn.addEventListener("click", () => {
+    if (!inSetup) return;
+    irregularVerbState.mode = btn.dataset.verbMode;
+    drawIrregularVerbs();
+  }));
+  $("#startIrregular")?.addEventListener("click", startIrregularVerbs);
+  if (inSetup) return;
+  const input = $("#irregularInput");
+  const submit = $("#submitIrregular");
+  const submitAnswer = () => {
+    if (!input || irregularVerbState.over) return;
+    const answer = normalizeVerbForm(input.value);
+    if (!answer) {
+      irregularVerbState.status = "Введи ответ перед проверкой.";
+      drawIrregularVerbs();
+      return;
+    }
+    irregularVerbState.answered += 1;
+    if (irregularVerbState.current.answers.includes(answer)) {
+      irregularVerbState.score += 1;
+      irregularVerbState.status = "Верно! Следующий глагол.";
+      playSfx("match");
+    } else {
+      irregularVerbState.lives -= 1;
+      irregularVerbState.status = `Неверно. Правильный ответ: ${irregularVerbState.current.answers.join(" / ")}`;
+      playSfx("error");
+    }
+    input.value = "";
+    if (irregularVerbState.lives <= 0 || irregularVerbState.answered >= irregularVerbState.maxRounds) {
+      finishIrregularVerbs();
+      return;
+    }
+    nextIrregularVerbQuestion();
+    drawIrregularVerbs();
+  };
+  submit?.addEventListener("click", submitAnswer);
+  input?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") submitAnswer();
+  });
+}
+
+function startIrregularVerbs() {
+  irregularVerbState.phase = "playing";
+  irregularVerbState.over = false;
+  irregularVerbState.lives = irregularVerbState.maxLives;
+  irregularVerbState.score = 0;
+  irregularVerbState.answered = 0;
+  irregularVerbState.asked = [];
+  irregularVerbState.status = "Вводи нужную форму. Время не ограничено, но жизней всего 5.";
+  nextIrregularVerbQuestion();
+  drawIrregularVerbs();
+}
+
+function finishIrregularVerbs() {
+  irregularVerbState.phase = "finished";
+  irregularVerbState.over = true;
+  irregularVerbState.current = null;
+  drawIrregularVerbs();
+  const reward = Math.min(1800, 180 + irregularVerbState.score * 45 + irregularVerbState.lives * 35);
+  if (irregularVerbState.score >= 10) {
+    completeWin(reward, "Irregular Verbs");
+  } else {
+    completeLoss();
+  }
 }
 
 function getCodebreakerPalette(level) {
@@ -1515,7 +1989,7 @@ function drawCodebreaker() {
             <div class="code-row-guess">
               ${entry.guess.map((colorId) => `<span class="code-dot small" style="background:${codebreakerState.palette.find((item) => item.id === colorId).color}"></span>`).join("")}
             </div>
-            <strong>${entry.exact} точн. · ${entry.misplaced} не на месте</strong>
+            <strong>${entry.exact} точно · ${entry.misplaced} не на месте</strong>
           </article>
         `).join("")}
       </div>
@@ -1806,10 +2280,13 @@ function renderMathRush() {
     ? mathRushState.selectedTypes.filter((id) => mathRushTypeMap[id])
     : [...mathRushDefaultTypes];
   const initialTypes = initialTypesRaw.length ? initialTypesRaw : [...mathRushDefaultTypes];
+  const initialPlayMode = mathRushState?.playMode === "lives" ? "lives" : "time";
   mathRushState = {
     active: false,
     over: false,
+    playMode: initialPlayMode,
     timeLeft: mathRushSettings.timeLimit,
+    livesLeft: 5,
     score: 0,
     answered: 0,
     combo: 0,
@@ -1819,51 +2296,82 @@ function renderMathRush() {
     recentTypes: [],
     recentSignatures: [],
     timer: null,
-    status: `Выбери одну или несколько тем и нажми старт. Сейчас: ${formatMathRushTypes(initialTypes)}.`,
+    status: `Выбери одну или несколько тем и нажми «Играть». Сейчас: ${formatMathRushTypes(initialTypes)}.`,
   };
   drawMathRush();
 }
 
 function drawMathRush() {
-  if (!mathRushState.active) mathRushState.timeLeft = mathRushSettings.timeLimit;
+  const isTimeMode = mathRushState.playMode !== "lives";
+  const inSetup = !mathRushState.active && !mathRushState.over && !mathRushState.current;
+  if (inSetup) {
+    mathRushState.timeLeft = mathRushSettings.timeLimit;
+    mathRushState.livesLeft = 5;
+  }
   const selected = new Set(mathRushState.selectedTypes);
-  $("#gameStage").innerHTML = stageShell(
-    "Math Rush",
-    mathRushState.active ? `осталось ${mathRushState.timeLeft} сек` : "режим на скорость",
-    `
-      <button class="soft-btn" id="restartMathRush">Заново</button>
-    `
-  ) + `
-    <div class="mini-game-panel mathrush-wrap">
-      <div class="mathrush-stats">
-        <div><strong>${mathRushState.timeLeft}</strong><small>сек</small></div>
-        <div><strong>${mathRushState.score}</strong><small>очки</small></div>
-        <div><strong>${mathRushState.maxCombo}</strong><small>макс. серия</small></div>
-      </div>
-      <p class="muted">Темы (можно выбрать несколько):</p>
-      <div class="segmented">
-        ${mathRushQuestionTypes.map((item) => `
-          <button class="chip ${selected.has(item.id) ? "active" : ""}" data-math-type="${item.id}" ${mathRushState.active ? "disabled" : ""}>
-            ${item.label}
-          </button>
-        `).join("")}
-      </div>
-      <p class="muted">${mathRushState.status}</p>
-      ${!mathRushState.active && !mathRushState.over ? `
-        <button id="startMathRush" class="primary-btn" ${mathRushState.selectedTypes.length ? "" : "disabled"}>Старт (${mathRushSettings.timeLimit} сек)</button>
-      ` : ""}
-      ${mathRushState.current ? `
-        <div class="math-question">${mathRushState.current.text}</div>
-        <div class="math-options">
-          ${mathRushState.current.options.map((option, index) => `
-            <button class="quiz-option" data-math-answer="${index}" ${!mathRushState.active ? "disabled" : ""}>${option}</button>
+  if (inSetup) {
+    $("#gameStage").innerHTML = stageShell(
+      "Math Rush",
+      "выбор режима",
+      `
+        <button class="soft-btn" id="restartMathRush">Заново</button>
+      `
+    ) + `
+      <div class="mini-game-panel mathrush-wrap">
+        <p class="muted">Режим игры:</p>
+        <div class="segmented">
+          <button class="chip ${mathRushState.playMode === "time" ? "active" : ""}" data-math-run="time">На время (1 мин)</button>
+          <button class="chip ${mathRushState.playMode === "lives" ? "active" : ""}" data-math-run="lives">На жизни (5)</button>
+        </div>
+        <p class="muted">Темы (можно выбрать несколько):</p>
+        <div class="segmented">
+          ${mathRushQuestionTypes.map((item) => `
+            <button class="chip ${selected.has(item.id) ? "active" : ""}" data-math-type="${item.id}">
+              ${item.label}
+            </button>
           `).join("")}
         </div>
-      ` : ""}
-      ${mathRushState.over ? `<p class="muted">Раунд завершён. Нажми «Заново», чтобы попробовать улучшить результат.</p>` : ""}
-    </div>
-  `;
+        <p class="muted">${mathRushState.status}</p>
+        <button id="startMathRush" class="primary-btn" ${mathRushState.selectedTypes.length ? "" : "disabled"}>Играть (${mathRushState.playMode === "time" ? "1 минута" : "5 жизней"})</button>
+      </div>
+    `;
+  } else {
+    $("#gameStage").innerHTML = stageShell(
+      "Math Rush",
+      mathRushState.active
+        ? (isTimeMode ? `осталось ${mathRushState.timeLeft} сек` : `жизни ${mathRushState.livesLeft}/5`)
+        : "результат раунда",
+      `
+        <button class="soft-btn" id="restartMathRush">Заново</button>
+      `
+    ) + `
+      <div class="mini-game-panel mathrush-wrap">
+        <div class="mathrush-stats">
+          <div><strong>${isTimeMode ? mathRushState.timeLeft : mathRushState.livesLeft}</strong><small>${isTimeMode ? "сек" : "жизни"}</small></div>
+          <div><strong>${mathRushState.score}</strong><small>очки</small></div>
+          <div><strong>${mathRushState.maxCombo}</strong><small>макс. серия</small></div>
+        </div>
+        <p class="muted">${mathRushState.status}</p>
+        ${mathRushState.current ? `
+          <div class="math-question">${mathRushState.current.text}</div>
+          <div class="math-options">
+            ${mathRushState.current.options.map((option, index) => `
+              <button class="quiz-option" data-math-answer="${index}" ${!mathRushState.active ? "disabled" : ""}>${option}</button>
+            `).join("")}
+          </div>
+        ` : ""}
+        ${mathRushState.over ? `<p class="muted">Раунд завершён. Нажми «Заново», чтобы попробовать улучшить результат.</p>` : ""}
+      </div>
+    `;
+  }
   $("#restartMathRush").addEventListener("click", renderMathRush);
+  $$("[data-math-run]").forEach((btn) => btn.addEventListener("click", () => {
+    if (mathRushState.active) return;
+    const value = btn.dataset.mathRun;
+    mathRushState.playMode = value === "lives" ? "lives" : "time";
+    mathRushState.status = `Режим: ${mathRushState.playMode === "time" ? "на время (1 минута)" : "на жизни (5)"} · Темы: ${formatMathRushTypes(mathRushState.selectedTypes)}.`;
+    drawMathRush();
+  }));
   $$("[data-math-type]").forEach((btn) => btn.addEventListener("click", () => {
     if (mathRushState.active) return;
     const typeId = btn.dataset.mathType;
@@ -1888,24 +2396,31 @@ function drawMathRush() {
 
 function startMathRush() {
   if (!mathRushState || mathRushState.active || !mathRushState.selectedTypes.length) return;
+  const isTimeMode = mathRushState.playMode !== "lives";
   mathRushState.active = true;
   mathRushState.over = false;
   mathRushState.timeLeft = mathRushSettings.timeLimit;
+  mathRushState.livesLeft = 5;
   mathRushState.score = 0;
   mathRushState.answered = 0;
   mathRushState.combo = 0;
   mathRushState.maxCombo = 0;
+  mathRushState.status = "Раунд начался. Решай примеры подряд и держи серию.";
   mathRushState.recentSignatures = [];
   mathRushState.recentTypes = [];
   nextMathRushQuestion();
-  mathRushState.timer = setInterval(() => {
-    mathRushState.timeLeft -= 1;
-    if (mathRushState.timeLeft <= 0) {
-      finishMathRush();
-      return;
-    }
-    drawMathRush();
-  }, 1000);
+  if (isTimeMode) {
+    mathRushState.timer = setInterval(() => {
+      mathRushState.timeLeft -= 1;
+      if (mathRushState.timeLeft <= 0) {
+        finishMathRush();
+        return;
+      }
+      drawMathRush();
+    }, 1000);
+  } else {
+    mathRushState.timer = null;
+  }
   drawMathRush();
 }
 
@@ -1927,6 +2442,7 @@ function nextMathRushQuestion() {
 
 function answerMathRush(answerIndex) {
   if (!mathRushState.active || !mathRushState.current) return;
+  const isLivesMode = mathRushState.playMode === "lives";
   mathRushState.answered += 1;
   if (answerIndex === mathRushState.current.answerIndex) {
     mathRushState.combo += 1;
@@ -1935,6 +2451,13 @@ function answerMathRush(answerIndex) {
     playSfx("match");
   } else {
     mathRushState.combo = 0;
+    if (isLivesMode) {
+      mathRushState.livesLeft -= 1;
+      if (mathRushState.livesLeft <= 0) {
+        finishMathRush();
+        return;
+      }
+    }
     playSfx("error");
   }
   nextMathRushQuestion();
@@ -1950,7 +2473,10 @@ function finishMathRush() {
   mathRushState.active = false;
   mathRushState.over = true;
   mathRushState.current = null;
-  mathRushState.status = `Финиш: ${mathRushState.score} очков, серия ${mathRushState.maxCombo}. Темы: ${formatMathRushTypes(mathRushState.selectedTypes)}.`;
+  const modeText = mathRushState.playMode === "lives"
+    ? `жизни: ${Math.max(0, mathRushState.livesLeft)}`
+    : `время: ${Math.max(0, mathRushState.timeLeft)} сек`;
+  mathRushState.status = `Финиш: ${mathRushState.score} очков, серия ${mathRushState.maxCombo}, ${modeText}. Темы: ${formatMathRushTypes(mathRushState.selectedTypes)}.`;
   drawMathRush();
   const reward = Math.max(120, mathRushSettings.rewardBase + mathRushState.score * mathRushSettings.rewardStep + mathRushState.maxCombo * 18);
   if (mathRushState.score < 3) {
@@ -2499,10 +3025,13 @@ function renderNonMathArcade(gameId) {
     gameId,
     region: nonMathGameState?.region || "europe",
     flagMode: nonMathGameState?.flagMode || "flag",
+    playMode: nonMathGameState?.playMode || "time",
     flagMoodSolved: [],
+    flagMoodRecent: [],
     active: false,
     over: false,
-    timeLeft: game.timeLimit,
+    timeLeft: 60,
+    livesLeft: 5,
     score: 0,
     answered: 0,
     combo: 0,
@@ -2510,7 +3039,7 @@ function renderNonMathArcade(gameId) {
     current: null,
     recentSignatures: [],
     timer: null,
-    status: "Нажми старт и решай задания как можно быстрее.",
+    status: "Выбери режим и нажми «Играть».",
   };
   drawNonMathArcade();
 }
@@ -2518,23 +3047,26 @@ function renderNonMathArcade(gameId) {
 function drawNonMathArcade() {
   const game = nonMathGameMap[nonMathGameState.gameId];
   if (!game) return;
-  if (game.mode === "flagMood" && !nonMathGameState.active && !nonMathGameState.over && !nonMathGameState.current) {
-    drawFlagMoodSetup(game);
+  const inSetup = !nonMathGameState.active && !nonMathGameState.over && !nonMathGameState.current;
+  if (inSetup) {
+    drawNonMathSetup(game);
     return;
   }
+  const isTimeMode = nonMathGameState.playMode !== "lives";
   $("#gameStage").innerHTML = stageShell(
     game.title,
-    nonMathGameState.active ? `осталось ${nonMathGameState.timeLeft} сек` : game.subtitle,
+    nonMathGameState.active
+      ? (isTimeMode ? `осталось ${nonMathGameState.timeLeft} сек` : `жизни ${nonMathGameState.livesLeft}/5`)
+      : game.subtitle,
     `<button class="soft-btn" id="restartNonMathGame">Заново</button>`
   ) + `
     <div class="mini-game-panel mathrush-wrap">
       <div class="mathrush-stats">
-        <div><strong>${nonMathGameState.timeLeft}</strong><small>сек</small></div>
+        <div><strong>${isTimeMode ? nonMathGameState.timeLeft : nonMathGameState.livesLeft}</strong><small>${isTimeMode ? "сек" : "жизни"}</small></div>
         <div><strong>${nonMathGameState.score}</strong><small>очки</small></div>
         <div><strong>${nonMathGameState.maxCombo}</strong><small>серия</small></div>
       </div>
       <p class="muted">${nonMathGameState.status}</p>
-      ${!nonMathGameState.active && !nonMathGameState.over ? `<button id="startNonMathGame" class="primary-btn">Старт</button>` : ""}
       ${nonMathGameState.current ? `
         <div class="math-question">${nonMathGameState.current.text}</div>
         <div class="math-options">
@@ -2545,36 +3077,54 @@ function drawNonMathArcade() {
     </div>
   `;
   $("#restartNonMathGame").addEventListener("click", () => renderNonMathArcade(nonMathGameState.gameId));
-  $("#startNonMathGame")?.addEventListener("click", startNonMathArcade);
   $$("[data-nonmath-answer]").forEach((btn) => btn.addEventListener("click", () => answerNonMathArcade(Number(btn.dataset.nonmathAnswer))));
 }
 
-function drawFlagMoodSetup(game) {
+function drawNonMathSetup(game) {
+  const safeRegionKey = flagMoodRegions[nonMathGameState.region] ? nonMathGameState.region : Object.keys(flagMoodRegions)[0];
+  if (nonMathGameState.region !== safeRegionKey) nonMathGameState.region = safeRegionKey;
+  const selectedRegion = flagMoodRegions[safeRegionKey] || Object.values(flagMoodRegions)[0];
+  const countriesCount = selectedRegion?.countries?.length || 0;
+  const isFlagMood = game.mode === "flagMood";
   $("#gameStage").innerHTML = stageShell(
     game.title,
     "выбор режима",
     ""
   ) + `
     <div class="mini-game-panel mathrush-wrap">
-      <label class="range-label">Регион
-        <select id="flagRegionSelect">
-          ${Object.entries(flagMoodRegions).map(([key, region]) => `<option value="${key}" ${nonMathGameState.region === key ? "selected" : ""}>${region.label}</option>`).join("")}
+      ${isFlagMood ? `
+        <label class="range-label">Регион
+          <select id="flagRegionSelect">
+            ${Object.entries(flagMoodRegions).map(([key, region]) => `<option value="${key}" ${nonMathGameState.region === key ? "selected" : ""}>${region.label}</option>`).join("")}
+          </select>
+        </label>
+        <label class="range-label">Тип вопросов
+          <select id="flagModeSelect">
+            <option value="flag" ${nonMathGameState.flagMode === "flag" ? "selected" : ""}>Флаг → страна</option>
+            <option value="capital" ${nonMathGameState.flagMode === "capital" ? "selected" : ""}>Страна + флаг → столица</option>
+          </select>
+        </label>
+      ` : ""}
+      <label class="range-label">Режим игры
+        <select id="nonMathPlayModeSelect">
+          <option value="time" ${nonMathGameState.playMode === "time" ? "selected" : ""}>На время (1 минута)</option>
+          <option value="lives" ${nonMathGameState.playMode === "lives" ? "selected" : ""}>На жизни (5)</option>
         </select>
       </label>
-      <label class="range-label">Тип вопросов
-        <select id="flagModeSelect">
-          <option value="flag" ${nonMathGameState.flagMode === "flag" ? "selected" : ""}>Флаг → страна</option>
-          <option value="capital" ${nonMathGameState.flagMode === "capital" ? "selected" : ""}>Страна + флаг → столица</option>
-        </select>
-      </label>
-      <p class="muted">В режиме столиц будет написана страна и показан флаг, а снизу нужно выбрать столицу.</p>
-      <button id="startNonMathGame" class="primary-btn">Старт</button>
+      <p class="muted">${isFlagMood
+        ? `Доступно стран: ${countriesCount}. В режиме столиц будет написана страна и показан флаг, а снизу нужно выбрать столицу.`
+        : "Выбери режим и нажми «Играть». В режиме на жизни ошибка уменьшает запас."}
+      </p>
+      <button id="startNonMathGame" class="primary-btn">Играть</button>
     </div>
   `;
-  $("#flagRegionSelect").addEventListener("change", (event) => {
+  $("#nonMathPlayModeSelect").addEventListener("change", (event) => {
+    nonMathGameState.playMode = event.target.value === "lives" ? "lives" : "time";
+  });
+  $("#flagRegionSelect")?.addEventListener("change", (event) => {
     nonMathGameState.region = event.target.value;
   });
-  $("#flagModeSelect").addEventListener("change", (event) => {
+  $("#flagModeSelect")?.addEventListener("change", (event) => {
     nonMathGameState.flagMode = event.target.value;
   });
   $("#startNonMathGame").addEventListener("click", startNonMathArcade);
@@ -2583,24 +3133,32 @@ function drawFlagMoodSetup(game) {
 function startNonMathArcade() {
   if (!nonMathGameState || nonMathGameState.active) return;
   const game = nonMathGameMap[nonMathGameState.gameId];
+  const isTimeMode = nonMathGameState.playMode !== "lives";
   nonMathGameState.active = true;
   nonMathGameState.over = false;
-  nonMathGameState.timeLeft = game.timeLimit;
+  nonMathGameState.timeLeft = isTimeMode ? 60 : game.timeLimit;
+  nonMathGameState.livesLeft = 5;
   nonMathGameState.score = 0;
   nonMathGameState.combo = 0;
   nonMathGameState.maxCombo = 0;
   nonMathGameState.answered = 0;
+  nonMathGameState.status = "Раунд начался. Отвечай точно и набирай серию.";
   nonMathGameState.recentSignatures = [];
   nonMathGameState.flagMoodSolved = [];
+  nonMathGameState.flagMoodRecent = [];
   nextNonMathArcadeQuestion();
-  nonMathGameState.timer = setInterval(() => {
-    nonMathGameState.timeLeft -= 1;
-    if (nonMathGameState.timeLeft <= 0) {
-      finishNonMathArcade();
-      return;
-    }
-    drawNonMathArcade();
-  }, 1000);
+  if (isTimeMode) {
+    nonMathGameState.timer = setInterval(() => {
+      nonMathGameState.timeLeft -= 1;
+      if (nonMathGameState.timeLeft <= 0) {
+        finishNonMathArcade();
+        return;
+      }
+      drawNonMathArcade();
+    }, 1000);
+  } else {
+    nonMathGameState.timer = null;
+  }
   drawNonMathArcade();
 }
 
@@ -2613,15 +3171,26 @@ function nextNonMathArcadeQuestion() {
 }
 
 function generateFlagMoodQuestion() {
-  const region = flagMoodRegions[nonMathGameState?.region] || flagMoodRegions.europe;
-  const countries = region.countries;
+  const region = flagMoodRegions[nonMathGameState?.region] || flagMoodRegions.europe || Object.values(flagMoodRegions)[0];
+  const allCountries = (region.countries || []).map((item) => ({ ...item, capital: item.capital || item.country }));
+  const countries = allCountries;
   const solved = nonMathGameState?.flagMoodSolved || [];
-  let candidates = countries.filter((country) => !solved.includes(country.country));
+  const recent = nonMathGameState?.flagMoodRecent || [];
+  let candidates = countries.filter((country) => !solved.includes(country.country) && !recent.includes(country.country));
+  if (!candidates.length) candidates = countries.filter((country) => !solved.includes(country.country));
   if (!candidates.length) {
     if (nonMathGameState) nonMathGameState.flagMoodSolved = [];
-    candidates = [...countries];
+    candidates = countries.filter((country) => !recent.includes(country.country));
+    if (!candidates.length) {
+      if (nonMathGameState) nonMathGameState.flagMoodRecent = [];
+      candidates = [...countries];
+    }
   }
   const item = candidates[randomInt(0, candidates.length - 1)];
+  if (nonMathGameState) {
+    nonMathGameState.flagMoodRecent.push(item.country);
+    if (nonMathGameState.flagMoodRecent.length > 10) nonMathGameState.flagMoodRecent.shift();
+  }
   if (nonMathGameState?.flagMode === "capital") {
     const options = shuffle([item.capital, ...shuffle(countries.filter((country) => country.capital !== item.capital)).slice(0, 3).map((country) => country.capital)]);
     return {
@@ -2645,6 +3214,7 @@ function generateFlagMoodQuestion() {
 function answerNonMathArcade(answerIndex) {
   if (!nonMathGameState?.active || !nonMathGameState.current) return;
   const game = nonMathGameMap[nonMathGameState.gameId];
+  const isLivesMode = nonMathGameState.playMode === "lives";
   nonMathGameState.answered += 1;
   if (answerIndex === nonMathGameState.current.answerIndex) {
     nonMathGameState.combo += 1;
@@ -2658,6 +3228,13 @@ function answerNonMathArcade(answerIndex) {
     playSfx("match");
   } else {
     nonMathGameState.combo = 0;
+    if (isLivesMode) {
+      nonMathGameState.livesLeft -= 1;
+      if (nonMathGameState.livesLeft <= 0) {
+        finishNonMathArcade();
+        return;
+      }
+    }
     playSfx("error");
   }
   nextNonMathArcadeQuestion();
@@ -2673,14 +3250,18 @@ function finishNonMathArcade() {
   nonMathGameState.active = false;
   nonMathGameState.over = true;
   nonMathGameState.current = null;
-  nonMathGameState.status = `Финиш: ${nonMathGameState.score} очков · серия ${nonMathGameState.maxCombo}.`;
+  const modeText = nonMathGameState.playMode === "lives"
+    ? `жизни: ${Math.max(0, nonMathGameState.livesLeft)}`
+    : `время: ${Math.max(0, nonMathGameState.timeLeft)} сек`;
+  nonMathGameState.status = `Финиш: ${nonMathGameState.score} очков · серия ${nonMathGameState.maxCombo} · ${modeText}.`;
   drawNonMathArcade();
   const game = nonMathGameMap[nonMathGameState.gameId];
   if (nonMathGameState.score < 3) {
     completeLoss();
     return;
   }
-  const reward = Math.max(140, game.rewardBase + nonMathGameState.score * game.rewardStep + nonMathGameState.maxCombo * 14);
+  const rewardRaw = game.rewardBase * 0.45 + nonMathGameState.score * Math.max(8, game.rewardStep * 0.28) + nonMathGameState.maxCombo * 5;
+  const reward = Math.min(2400, Math.max(80, Math.round(rewardRaw)));
   completeWin(reward, game.title);
 }
 
@@ -2690,17 +3271,99 @@ const pieceChars = {
 };
 
 const pieceValue = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 20000 };
+const chessAIOpeningMemory = new Map();
 
 const chessLevelConfig = {
-  1: { depth: 0, width: 6, noise: 22, quiescence: 0 },
-  2: { depth: 1, width: 8, noise: 14, quiescence: 0 },
-  3: { depth: 2, width: 14, noise: 6, quiescence: 0 },
-  4: { depth: 2, width: 18, noise: 3, quiescence: 1 },
-  5: { depth: 3, width: 22, noise: 1.5, quiescence: 1 },
-  6: { depth: 3, width: 26, noise: 0.6, quiescence: 2 },
-  7: { depth: 4, width: 26, noise: 0.25, quiescence: 2 },
-  8: { depth: 4, width: 32, noise: 0.05, quiescence: 3 },
+  1: { depth: 0, width: 5, noise: 20, quiescence: 0 },
+  2: { depth: 1, width: 7, noise: 12, quiescence: 0 },
+  3: { depth: 1, width: 10, noise: 8, quiescence: 0 },
+  4: { depth: 2, width: 14, noise: 4, quiescence: 1 },
+  5: { depth: 2, width: 18, noise: 2, quiescence: 1 },
+  6: { depth: 3, width: 22, noise: 0.9, quiescence: 1 },
+  7: { depth: 3, width: 26, noise: 0.4, quiescence: 2 },
+  8: { depth: 4, width: 28, noise: 0.18, quiescence: 2 },
+  9: { depth: 4, width: 30, noise: 0.08, quiescence: 3 },
+  10: { depth: 4, width: 34, noise: 0.02, quiescence: 3 },
 };
+
+function getAiThinkDelayMs() {
+  const level = chessState?.level || 1;
+  const byLevel = {
+    1: [1000, 1400],
+    2: [1200, 1700],
+    3: [1450, 2050],
+    4: [1700, 2400],
+    5: [2000, 2800],
+    6: [2350, 3300],
+    7: [2750, 3800],
+    8: [3200, 4300],
+    9: [3600, 4700],
+    10: [4000, 5000],
+  };
+  const [minDelay, maxDelay] = byLevel[level] || [1800, 2600];
+  return randomInt(minDelay, maxDelay);
+}
+
+function chessPositionKey(game) {
+  if (!game?.board) return "";
+  const boardKey = game.board
+    .map((row) => row.map((cell) => cell || "__").join(""))
+    .join("/");
+  const castlingRaw = `${game.castling?.wK ? "K" : ""}${game.castling?.wQ ? "Q" : ""}${game.castling?.bK ? "k" : ""}${game.castling?.bQ ? "q" : ""}`;
+  const castlingKey = castlingRaw || "-";
+  const enPassantKey = game.enPassant ? `${game.enPassant.r}${game.enPassant.c}` : "-";
+  return `${boardKey}|${game.turn}|${castlingKey}|${enPassantKey}`;
+}
+
+function chessMoveKey(move) {
+  const promotion = move.promotion ? `=${move.promotion === true ? "Q" : move.promotion}` : "";
+  const castle = move.castle ? `c${move.castle}` : "";
+  const ep = move.enPassantCapture ? "ep" : "";
+  return `${move.fr}${move.fc}-${move.tr}${move.tc}${promotion}${castle}${ep}`;
+}
+
+function rememberChessPosition(game) {
+  if (!game) return;
+  const key = chessPositionKey(game);
+  if (!key) return;
+  if (!game.positionHistory) game.positionHistory = Object.create(null);
+  game.positionHistory[key] = (game.positionHistory[key] || 0) + 1;
+}
+
+function openingContextKey(game) {
+  if (!game?.board || game.fullmove > 12) return "";
+  return chessPositionKey(game);
+}
+
+function openingRepeatPenalty(game, move) {
+  const context = openingContextKey(game);
+  if (!context) return 0;
+  const memory = chessAIOpeningMemory.get(context);
+  if (!memory) return 0;
+  const repeats = memory[chessMoveKey(move)] || 0;
+  return Math.min(160, repeats * 20);
+}
+
+function localRepetitionPenalty(game, move) {
+  if (!game?.positionHistory) return 0;
+  const next = makeSearchGameAfterMove(game, move, opposite(game.turn));
+  const nextKey = chessPositionKey(next);
+  const repeats = game.positionHistory[nextKey] || 0;
+  return repeats * 180;
+}
+
+function rememberAIOpeningChoice(game, move) {
+  const context = openingContextKey(game);
+  if (!context) return;
+  const moveKey = chessMoveKey(move);
+  const memory = chessAIOpeningMemory.get(context) || Object.create(null);
+  memory[moveKey] = (memory[moveKey] || 0) + 1;
+  chessAIOpeningMemory.set(context, memory);
+  if (chessAIOpeningMemory.size > 900) {
+    const oldest = chessAIOpeningMemory.keys().next().value;
+    chessAIOpeningMemory.delete(oldest);
+  }
+}
 
 function initialBoard() {
   return [
@@ -2747,9 +3410,11 @@ function startChessGame() {
     over: false,
     lastMove: null,
     animateLastMove: false,
+    positionHistory: Object.create(null),
   };
+  rememberChessPosition(chessState);
   drawChess();
-  if (chessState.mode === "ai" && chessState.playerColor === "b") setTimeout(aiMove, 500);
+  if (chessState.mode === "ai" && chessState.playerColor === "b") setTimeout(aiMove, getAiThinkDelayMs());
 }
 
 function drawChessSetup() {
@@ -2881,7 +3546,6 @@ function clickSquare(r, c) {
   if (!chessState.selected) {
     if (piece && piece[0] === chessState.turn) {
       chessState.selected = { r, c };
-      playSfx("click");
       drawChess();
     }
     return;
@@ -2896,7 +3560,6 @@ function clickSquare(r, c) {
     }
     commitChessMove(move);
   } else {
-    playSfx(piece && piece[0] === chessState.turn ? "click" : "error");
     chessState.selected = piece && piece[0] === chessState.turn ? { r, c } : null;
   }
   drawChess();
@@ -2913,7 +3576,7 @@ function choosePromotion(type) {
 
 function maybeAiTurn() {
   if (!chessState.over && chessState.mode === "ai" && chessState.turn !== chessState.playerColor) {
-    setTimeout(aiMove, 460);
+    setTimeout(aiMove, getAiThinkDelayMs());
   }
 }
 
@@ -2951,7 +3614,8 @@ function commitChessMove(move) {
   chessState.selected = null;
   chessState.turn = opposite(chessState.turn);
   if (chessState.turn === "w") chessState.fullmove += 1;
-  playSfx(captured ? "match" : "move");
+  rememberChessPosition(chessState);
+  playChessMoveAudio();
   updateChessStatus();
 }
 
@@ -2978,7 +3642,7 @@ function updateChessStatus() {
       chessState.status = `${winner === "w" ? "Белые" : "Чёрные"} поставили мат`;
       if (chessState.mode === "ai") {
         if (winner === chessState.playerColor) {
-          const reward = [0, 120, 240, 420, 720, 1100, 1550, 2100, 2800][chessState.level] || 120;
+          const reward = [0, 120, 220, 360, 520, 720, 980, 1300, 1700, 2200, 2900][chessState.level] || 120;
           completeWin(reward, `Шахматы · ${chessLevelLabels[chessState.level]}`);
           if (chessState.level >= 5) unlockAchievement("chessHard");
         } else {
@@ -3136,6 +3800,7 @@ function aiMove() {
   const moves = allLegalMoves(chessState, chessState.turn);
   if (!moves.length) return updateChessStatus();
   const move = chooseAiMove(moves);
+  rememberAIOpeningChoice(chessState, move);
   commitChessMove({ ...move, promotion: move.promotion ? "Q" : move.promotion });
   drawChess();
 }
@@ -3144,15 +3809,20 @@ function chooseAiMove(moves) {
   const style = chessStyles[chessState.style] || chessStyles.balanced;
   const config = chessLevelConfig[chessState.level] || chessLevelConfig[5];
   const ordered = [...moves].sort((a, b) => scoreMove(b, false) - scoreMove(a, false));
-  if (config.depth <= 0) return pickFromTop(ordered, config.width, config.noise + style.random);
+  const baseNoise = Math.max(0.02, config.noise + style.random * 0.12);
+  if (config.depth <= 0) return pickFromTop(chessState, ordered, config.width, baseNoise);
 
-  const depth = Math.max(1, Math.min(4, config.depth + style.depthBonus));
+  const depthCap = 5;
+  const depth = Math.max(1, Math.min(depthCap, config.depth + style.depthBonus));
   const candidates = ordered.slice(0, Math.min(config.width, ordered.length));
   let best = candidates[0] || ordered[0];
   let bestScore = -Infinity;
+  const levelNoise = chessState.level >= 8 ? baseNoise * 0.24 : chessState.level >= 5 ? baseNoise * 0.5 : baseNoise;
   for (const move of candidates) {
     const score = -searchAfterMove(chessState, move, depth - 1, -Infinity, Infinity, opposite(chessState.turn), config.quiescence);
-    const adjusted = score + Math.random() * config.noise;
+    const strategicBonus = topMoveHeuristicBonus(chessState, move) * (chessState.level <= 3 ? 0.35 : 0.55);
+    const antiRepeatPenalty = localRepetitionPenalty(chessState, move) + openingRepeatPenalty(chessState, move);
+    const adjusted = score + strategicBonus - antiRepeatPenalty + Math.random() * levelNoise;
     if (adjusted > bestScore) {
       bestScore = adjusted;
       best = move;
@@ -3161,10 +3831,34 @@ function chooseAiMove(moves) {
   return best;
 }
 
-function pickFromTop(ordered, width, noise) {
+function pickFromTop(game, ordered, width, noise) {
   const pool = ordered.slice(0, Math.min(width, ordered.length));
-  pool.sort((a, b) => scoreMove(b) + Math.random() * noise - (scoreMove(a) + Math.random() * noise));
-  return pool[0] || ordered[0];
+  const ranked = pool.map((move) => {
+    const antiRepeatPenalty = localRepetitionPenalty(game, move) + openingRepeatPenalty(game, move);
+    const score = scoreMoveForBoard(game.board, move, false)
+      + topMoveHeuristicBonus(game, move) * 0.42
+      - antiRepeatPenalty
+      + Math.random() * noise;
+    return { move, score };
+  }).sort((a, b) => b.score - a.score);
+  return ranked[0]?.move || ordered[0];
+}
+
+function topMoveHeuristicBonus(game, move) {
+  const moving = game.board[move.fr][move.fc];
+  if (!moving) return 0;
+  const moverColor = moving[0];
+  const enemyColor = opposite(moverColor);
+  const normalizedMove = { ...move, promotion: move.promotion === true ? "Q" : move.promotion };
+  const nextBoard = applyMoveTo(game.board, normalizedMove);
+  const givesCheck = isInCheck(nextBoard, enemyColor);
+  const movedPiece = nextBoard[move.tr][move.tc];
+  if (!movedPiece) return givesCheck ? 30 : 0;
+  const attacked = isSquareAttacked(nextBoard, move.tr, move.tc, enemyColor);
+  const defended = isSquareAttacked(nextBoard, move.tr, move.tc, moverColor);
+  const dangerPenalty = attacked ? pieceValue[movedPiece[1]] * (defended ? 0.06 : 0.18) : 0;
+  const center = 8 - (Math.abs(3.5 - move.tr) + Math.abs(3.5 - move.tc));
+  return (givesCheck ? 42 : 0) + (move.castle ? 34 : 0) + center * 2 - dangerPenalty;
 }
 
 function searchAfterMove(game, move, depth, alpha, beta, colorToMove, quiescenceDepth = 0) {

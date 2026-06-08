@@ -9,7 +9,7 @@
     <link rel="icon" href="icons/love-icon.svg" type="image/svg+xml" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Love" />
-    <link rel="stylesheet" href="styles.css?v=7" />
+    <link rel="stylesheet" href="styles.css?v=14" />
   </head>
   <body>
     <canvas id="ambientCanvas" aria-hidden="true"></canvas>
@@ -112,14 +112,14 @@
             <button class="game-card" data-game="chess">
               <span class="game-icon">♛</span>
               <strong>Шахматы</strong>
-              <small>Выбор режима, стороны и силы</small>
-              <em>120-1400 hearts</em>
+              <small>10 уровней бота: 250-2500 elo</small>
+              <em>120-3200 hearts</em>
             </button>
             <button class="game-card" data-game="simon">
               <span class="game-icon">◉</span>
               <strong>Simon Pulse</strong>
-              <small>Тренировка памяти и концентрации</small>
-              <em>220-880 hearts</em>
+              <small>Память, счётчик нажатий и уровни</small>
+              <em>220-1900 hearts</em>
             </button>
             <button class="game-card" data-game="codebreaker">
               <span class="game-icon">⌘</span>
@@ -138,6 +138,12 @@
               <strong>Math Rush</strong>
               <small>Скорость мышления под таймером</small>
               <em>200-1500 hearts</em>
+            </button>
+            <button class="game-card" data-game="irregularverbs">
+              <span class="game-icon">📘</span>
+              <strong>Irregular Verbs</strong>
+              <small>Неправильные глаголы на 5 жизней</small>
+              <em>до 1800 hearts</em>
             </button>
           </div>
 
@@ -232,12 +238,17 @@
                 </label>
                 <label class="range-label">
                   Громкость звуков приложения
-                  <input id="sfxVolumeRange" type="range" min="0" max="100" value="70" />
+                  <input id="sfxVolumeRange" type="range" min="0" max="100" value="82" />
                 </label>
                 <div class="toggle-row">
                   <label><input id="musicEnabledToggle" type="checkbox" /> Музыка</label>
                   <label><input id="sfxEnabledToggle" type="checkbox" /> Звуки приложения</label>
                 </div>
+                <label class="range-label">
+                  Добавить свои треки
+                  <input id="customTrackInput" type="file" accept="audio/*" multiple />
+                </label>
+                <small class="muted">Загруженные треки работают локально (до перезагрузки страницы).</small>
                 <div id="trackList" class="track-list"></div>
               </div>
 
@@ -264,6 +275,6 @@
     <div id="rewardToast" class="reward-toast" aria-live="assertive"></div>
     <div id="modalRoot" class="modal-root hidden"></div>
     <audio id="audioPlayer" preload="metadata"></audio>
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=14"></script>
   </body>
 </html>

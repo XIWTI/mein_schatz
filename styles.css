@@ -712,6 +712,14 @@ select:focus-visible {
   color: rgba(205, 189, 200, 0.82);
 }
 
+#customTrackInput {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+
 .toggle-row label {
   display: flex;
   align-items: center;
@@ -829,6 +837,21 @@ body.game-open .game-stage.active {
   justify-content: flex-end;
 }
 
+.simon-counter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  min-width: 92px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(246, 199, 102, 0.65);
+  background: rgba(246, 199, 102, 0.2);
+  color: #fff5d0;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
 .segmented {
   display: flex;
   gap: 8px;
@@ -849,6 +872,17 @@ body.game-open .game-stage.active {
   color: var(--ink);
   border-color: rgba(246, 199, 102, 0.72);
   background: rgba(246, 199, 102, 0.16);
+}
+
+.simon-continue-btn {
+  color: #08261d;
+  border-color: rgba(121, 226, 194, 0.8);
+  background: linear-gradient(145deg, rgba(121, 226, 194, 0.95), rgba(142, 197, 255, 0.9));
+  box-shadow: 0 12px 26px rgba(121, 226, 194, 0.35);
+}
+
+.simon-continue-btn:hover {
+  transform: translateY(-1px);
 }
 
 .memory-board,

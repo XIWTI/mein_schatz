@@ -1,9 +1,9 @@
-const CACHE_NAME = "love-arcade-v7";
+const CACHE_NAME = "love-arcade-v14";
 const ASSETS = [
   ".",
   "index.html",
-  "styles.css?v=7",
-  "app.js?v=7",
+  "styles.css?v=14",
+  "app.js?v=14",
   "manifest.json",
   "icons/love-icon.svg",
   "music/Mrs Magic - Strawberry Guy.mp3",
@@ -12,6 +12,7 @@ const ASSETS = [
   "music/i don t like mirrors - i miss your warm hands.mp3",
   "music/Flxweroff - Killswitch.mp3",
   "music/02 A Normal Life.mp3",
+  "music/capture.mp3",
 ];
 
 self.addEventListener("install", (event) => {
