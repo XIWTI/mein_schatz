@@ -323,75 +323,271 @@ const nonMathGameMap = Object.fromEntries(nonMathArcadeGames.map((game) => [game
 
 let irregularVerbState = null;
 
-let flagMoodRegions = {
-  europe: {
-    label: "Европа",
-    countries: [
-      { flag: "🇫🇷", country: "Франция", capital: "Париж" },
-      { flag: "🇩🇪", country: "Германия", capital: "Берлин" },
-      { flag: "🇮🇹", country: "Италия", capital: "Рим" },
-      { flag: "🇪🇸", country: "Испания", capital: "Мадрид" },
-      { flag: "🇵🇱", country: "Польша", capital: "Варшава" },
-      { flag: "🇳🇴", country: "Норвегия", capital: "Осло" },
-    ],
-  },
-  asia: {
-    label: "Азия",
-    countries: [
-      { flag: "🇯🇵", country: "Япония", capital: "Токио" },
-      { flag: "🇨🇳", country: "Китай", capital: "Пекин" },
-      { flag: "🇰🇷", country: "Южная Корея", capital: "Сеул" },
-      { flag: "🇮🇳", country: "Индия", capital: "Нью-Дели" },
-      { flag: "🇹🇭", country: "Таиланд", capital: "Бангкок" },
-      { flag: "🇹🇷", country: "Турция", capital: "Анкара" },
-    ],
-  },
-  southAmerica: {
-    label: "Южная Америка",
-    countries: [
-      { flag: "🇧🇷", country: "Бразилия", capital: "Бразилиа" },
-      { flag: "🇦🇷", country: "Аргентина", capital: "Буэнос-Айрес" },
-      { flag: "🇨🇱", country: "Чили", capital: "Сантьяго" },
-      { flag: "🇵🇪", country: "Перу", capital: "Лима" },
-      { flag: "🇨🇴", country: "Колумбия", capital: "Богота" },
-      { flag: "🇺🇾", country: "Уругвай", capital: "Монтевидео" },
-    ],
-  },
-  northAmerica: {
-    label: "Северная Америка",
-    countries: [
-      { flag: "🇺🇸", country: "США", capital: "Вашингтон" },
-      { flag: "🇨🇦", country: "Канада", capital: "Оттава" },
-      { flag: "🇲🇽", country: "Мексика", capital: "Мехико" },
-      { flag: "🇨🇺", country: "Куба", capital: "Гавана" },
-      { flag: "🇯🇲", country: "Ямайка", capital: "Кингстон" },
-      { flag: "🇵🇦", country: "Панама", capital: "Панама" },
-    ],
-  },
-  africa: {
-    label: "Африка",
-    countries: [
-      { flag: "🇪🇬", country: "Египет", capital: "Каир" },
-      { flag: "🇿🇦", country: "ЮАР", capital: "Претория" },
-      { flag: "🇰🇪", country: "Кения", capital: "Найроби" },
-      { flag: "🇲🇦", country: "Марокко", capital: "Рабат" },
-      { flag: "🇳🇬", country: "Нигерия", capital: "Абуджа" },
-      { flag: "🇪🇹", country: "Эфиопия", capital: "Аддис-Абеба" },
-    ],
-  },
+const flagMoodRegionLabels = {
+  world: "\u0412\u0441\u0435 \u0441\u0442\u0440\u0430\u043d\u044b",
+  europe: "\u0415\u0432\u0440\u043e\u043f\u0430",
+  asia: "\u0410\u0437\u0438\u044f",
+  africa: "\u0410\u0444\u0440\u0438\u043a\u0430",
+  northAmerica: "\u0421\u0435\u0432\u0435\u0440\u043d\u0430\u044f \u0410\u043c\u0435\u0440\u0438\u043a\u0430",
+  centralAmerica: "\u0426\u0435\u043d\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f \u0410\u043c\u0435\u0440\u0438\u043a\u0430",
+  caribbean: "\u041a\u0430\u0440\u0438\u0431\u044b",
+  southAmerica: "\u042e\u0436\u043d\u0430\u044f \u0410\u043c\u0435\u0440\u0438\u043a\u0430",
+  oceania: "\u041e\u043a\u0435\u0430\u043d\u0438\u044f",
+  antarctica: "\u0410\u043d\u0442\u0430\u0440\u043a\u0442\u0438\u043a\u0430",
 };
 
-let flagMoodLoaded = false;
-const flagMoodRegionLabels = {
-  world: "Все страны мира",
-  europe: "Европа",
-  asia: "Азия",
-  africa: "Африка",
-  northAmerica: "Северная Америка",
-  southAmerica: "Южная Америка",
-  oceania: "Океания",
-  antarctica: "Антарктика",
-};
+const flagMoodFallbackRows = [
+  ["AU", "\u0410\u0432\u0441\u0442\u0440\u0430\u043b\u0438\u044f", "Canberra", "Oceania", "Australia and New Zealand"],
+  ["AT", "\u0410\u0432\u0441\u0442\u0440\u0438\u044f", "Vienna", "Europe", "Central Europe"],
+  ["AZ", "\u0410\u0437\u0435\u0440\u0431\u0430\u0439\u0434\u0436\u0430\u043d", "Baku", "Asia", "Western Asia"],
+  ["AX", "\u0410\u043b\u0430\u043d\u0434\u0441\u043a\u0438\u0435 \u043e\u0441\u0442\u0440\u043e\u0432\u0430", "Mariehamn", "Europe", "Northern Europe"],
+  ["AL", "\u0410\u043b\u0431\u0430\u043d\u0438\u044f", "Tirana", "Europe", "Southeast Europe"],
+  ["DZ", "\u0410\u043b\u0436\u0438\u0440", "Algiers", "Africa", "Northern Africa"],
+  ["AS", "\u0410\u043c\u0435\u0440\u0438\u043a\u0430\u043d\u0441\u043a\u043e\u0435 \u0421\u0430\u043c\u043e\u0430", "Pago Pago", "Oceania", "Polynesia"],
+  ["AI", "\u0410\u043d\u0433\u0438\u043b\u044c\u044f", "The Valley", "Americas", "Caribbean"],
+  ["AO", "\u0410\u043d\u0433\u043e\u043b\u0430", "Luanda", "Africa", "Middle Africa"],
+  ["AD", "\u0410\u043d\u0434\u043e\u0440\u0440\u0430", "Andorra la Vella", "Europe", "Southern Europe"],
+  ["AQ", "\u0410\u043d\u0442\u0430\u0440\u043a\u0442\u0438\u0434\u0430", "\u0410\u043d\u0442\u0430\u0440\u043a\u0442\u0438\u0434\u0430", "Antarctic", ""],
+  ["AG", "\u0410\u043d\u0442\u0438\u0433\u0443\u0430 \u0438 \u0411\u0430\u0440\u0431\u0443\u0434\u0430", "Saint John's", "Americas", "Caribbean"],
+  ["AR", "\u0410\u0440\u0433\u0435\u043d\u0442\u0438\u043d\u0430", "Buenos Aires", "Americas", "South America"],
+  ["AM", "\u0410\u0440\u043c\u0435\u043d\u0438\u044f", "Yerevan", "Asia", "Western Asia"],
+  ["AW", "\u0410\u0440\u0443\u0431\u0430", "Oranjestad", "Americas", "Caribbean"],
+  ["AF", "\u0410\u0444\u0433\u0430\u043d\u0438\u0441\u0442\u0430\u043d", "Kabul", "Asia", "Southern Asia"],
+  ["BS", "\u0411\u0430\u0433\u0430\u043c\u0441\u043a\u0438\u0435 \u041e\u0441\u0442\u0440\u043e\u0432\u0430", "Nassau", "Americas", "Caribbean"],
+  ["BD", "\u0411\u0430\u043d\u0433\u043b\u0430\u0434\u0435\u0448", "Dhaka", "Asia", "Southern Asia"],
+  ["BB", "\u0411\u0430\u0440\u0431\u0430\u0434\u043e\u0441", "Bridgetown", "Americas", "Caribbean"],
+  ["BH", "\u0411\u0430\u0445\u0440\u0435\u0439\u043d", "Manama", "Asia", "Western Asia"],
+  ["BY", "\u0411\u0435\u043b\u0430\u0440\u0443\u0441\u044c", "Minsk", "Europe", "Eastern Europe"],
+  ["BZ", "\u0411\u0435\u043b\u0438\u0437", "Belmopan", "Americas", "Central America"],
+  ["BE", "\u0411\u0435\u043b\u044c\u0433\u0438\u044f", "Brussels", "Europe", "Western Europe"],
+  ["BJ", "\u0411\u0435\u043d\u0438\u043d", "Porto-Novo", "Africa", "Western Africa"],
+  ["BM", "\u0411\u0435\u0440\u043c\u0443\u0434\u0441\u043a\u0438\u0435 \u041e\u0441\u0442\u0440\u043e\u0432\u0430", "Hamilton", "Americas", "North America"],
+  ["BG", "\u0411\u043e\u043b\u0433\u0430\u0440\u0438\u044f", "Sofia", "Europe", "Southeast Europe"],
+  ["BO", "\u0411\u043e\u043b\u0438\u0432\u0438\u044f", "Sucre", "Americas", "South America"],
+  ["BA", "\u0411\u043e\u0441\u043d\u0438\u044f \u0438 \u0413\u0435\u0440\u0446\u0435\u0433\u043e\u0432\u0438\u043d\u0430", "Sarajevo", "Europe", "Southeast Europe"],
+  ["BW", "\u0411\u043e\u0442\u0441\u0432\u0430\u043d\u0430", "Gaborone", "Africa", "Southern Africa"],
+  ["BR", "\u0411\u0440\u0430\u0437\u0438\u043b\u0438\u044f", "Bras\u00edlia", "Americas", "South America"],
+  ["IO", "\u0411\u0440\u0438\u0442\u0430\u043d\u0441\u043a\u0430\u044f \u0442\u0435\u0440\u0440\u0438\u0442\u043e\u0440\u0438\u044f \u0432 \u0418\u043d\u0434\u0438\u0439\u0441\u043a\u043e\u043c \u043e\u043a\u0435\u0430\u043d\u0435", "Diego Garcia", "Africa", "Eastern Africa"],
+  ["VG", "\u0411\u0440\u0438\u0442\u0430\u043d\u0441\u043a\u0438\u0435 \u0412\u0438\u0440\u0433\u0438\u043d\u0441\u043a\u0438\u0435 \u043e\u0441\u0442\u0440\u043e\u0432\u0430", "Road Town", "Americas", "Caribbean"],
+  ["BN", "\u0411\u0440\u0443\u043d\u0435\u0439", "Bandar Seri Begawan", "Asia", "South-Eastern Asia"],
+  ["BF", "\u0411\u0443\u0440\u043a\u0438\u043d\u0430-\u0424\u0430\u0441\u043e", "Ouagadougou", "Africa", "Western Africa"],
+  ["BI", "\u0411\u0443\u0440\u0443\u043d\u0434\u0438", "Gitega", "Africa", "Eastern Africa"],
+  ["BT", "\u0411\u0443\u0442\u0430\u043d", "Thimphu", "Asia", "Southern Asia"],
+  ["VU", "\u0412\u0430\u043d\u0443\u0430\u0442\u0443", "Port Vila", "Oceania", "Melanesia"],
+  ["VA", "\u0412\u0430\u0442\u0438\u043a\u0430\u043d", "Vatican City", "Europe", "Southern Europe"],
+  ["GB", "\u0412\u0435\u043b\u0438\u043a\u043e\u0431\u0440\u0438\u0442\u0430\u043d\u0438\u044f", "London", "Europe", "Northern Europe"],
+  ["HU", "\u0412\u0435\u043d\u0433\u0440\u0438\u044f", "Budapest", "Europe", "Central Europe"],
+  ["VE", "\u0412\u0435\u043d\u0435\u0441\u0443\u044d\u043b\u0430", "Caracas", "Americas", "South America"],
+  ["VI", "\u0412\u0438\u0440\u0433\u0438\u043d\u0441\u043a\u0438\u0435 \u041e\u0441\u0442\u0440\u043e\u0432\u0430", "Charlotte Amalie", "Americas", "Caribbean"],
+  ["UM", "\u0412\u043d\u0435\u0448\u043d\u0438\u0435 \u043c\u0430\u043b\u044b\u0435 \u043e\u0441\u0442\u0440\u043e\u0432\u0430 \u0421\u0428\u0410", "\u0412\u043d\u0435\u0448\u043d\u0438\u0435 \u043c\u0430\u043b\u044b\u0435 \u043e\u0441\u0442\u0440\u043e\u0432\u0430 \u0421\u0428\u0410", "Americas", "North America"],
+  ["TL", "\u0412\u043e\u0441\u0442\u043e\u0447\u043d\u044b\u0439 \u0422\u0438\u043c\u043e\u0440", "Dili", "Asia", "South-Eastern Asia"],
+  ["VN", "\u0412\u044c\u0435\u0442\u043d\u0430\u043c", "Hanoi", "Asia", "South-Eastern Asia"],
+  ["GA", "\u0413\u0430\u0431\u043e\u043d", "Libreville", "Africa", "Middle Africa"],
+  ["GY", "\u0413\u0430\u0439\u0430\u043d\u0430", "Georgetown", "Americas", "South America"],
+  ["HT", "\u0413\u0430\u0438\u0442\u0438", "Port-au-Prince", "Americas", "Caribbean"],
+  ["GM", "\u0413\u0430\u043c\u0431\u0438\u044f", "Banjul", "Africa", "Western Africa"],
+  ["GH", "\u0413\u0430\u043d\u0430", "Accra", "Africa", "Western Africa"],
+  ["GP", "\u0413\u0432\u0430\u0434\u0435\u043b\u0443\u043f\u0430", "Basse-Terre", "Americas", "Caribbean"],
+  ["GT", "\u0413\u0432\u0430\u0442\u0435\u043c\u0430\u043b\u0430", "Guatemala City", "Americas", "Central America"],
+  ["GN", "\u0413\u0432\u0438\u043d\u0435\u044f", "Conakry", "Africa", "Western Africa"],
+  ["GW", "\u0413\u0432\u0438\u043d\u0435\u044f-\u0411\u0438\u0441\u0430\u0443", "Bissau", "Africa", "Western Africa"],
+  ["DE", "\u0413\u0435\u0440\u043c\u0430\u043d\u0438\u044f", "Berlin", "Europe", "Western Europe"],
+  ["GG", "\u0413\u0435\u0440\u043d\u0441\u0438", "St. Peter Port", "Europe", "Northern Europe"],
+  ["GI", "\u0413\u0438\u0431\u0440\u0430\u043b\u0442\u0430\u0440", "Gibraltar", "Europe", "Southern Europe"],
+  ["HN", "\u0413\u043e\u043d\u0434\u0443\u0440\u0430\u0441", "Tegucigalpa", "Americas", "Central America"],
+  ["HK", "\u0413\u043e\u043d\u043a\u043e\u043d\u0433", "City of Victoria", "Asia", "Eastern Asia"],
+  ["GD", "\u0413\u0440\u0435\u043d\u0430\u0434\u0430", "St. George's", "Americas", "Caribbean"],
+  ["GL", "\u0413\u0440\u0435\u043d\u043b\u0430\u043d\u0434\u0438\u044f", "Nuuk", "Americas", "North America"],
+  ["GR", "\u0413\u0440\u0435\u0446\u0438\u044f", "Athens", "Europe", "Southern Europe"],
+  ["GE", "\u0413\u0440\u0443\u0437\u0438\u044f", "Tbilisi", "Asia", "Western Asia"],
+  ["GU", "\u0413\u0443\u0430\u043c", "Hag\u00e5t\u00f1a", "Oceania", "Micronesia"],
+  ["DK", "\u0414\u0430\u043d\u0438\u044f", "Copenhagen", "Europe", "Northern Europe"],
+  ["CD", "\u0414\u0435\u043c\u043e\u043a\u0440\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u0420\u0435\u0441\u043f\u0443\u0431\u043b\u0438\u043a\u0430 \u041a\u043e\u043d\u0433\u043e", "Kinshasa", "Africa", "Middle Africa"],
+  ["JE", "\u0414\u0436\u0435\u0440\u0441\u0438", "Saint Helier", "Europe", "Northern Europe"],
+  ["DJ", "\u0414\u0436\u0438\u0431\u0443\u0442\u0438", "Djibouti", "Africa", "Eastern Africa"],
+  ["DM", "\u0414\u043e\u043c\u0438\u043d\u0438\u043a\u0430", "Roseau", "Americas", "Caribbean"],
+  ["DO", "\u0414\u043e\u043c\u0438\u043d\u0438\u043a\u0430\u043d\u0441\u043a\u0430\u044f \u0420\u0435\u0441\u043f\u0443\u0431\u043b\u0438\u043a\u0430", "Santo Domingo", "Americas", "Caribbean"],
+  ["EG", "\u0415\u0433\u0438\u043f\u0435\u0442", "Cairo", "Africa", "Northern Africa"],
+  ["ZM", "\u0417\u0430\u043c\u0431\u0438\u044f", "Lusaka", "Africa", "Eastern Africa"],
+  ["EH", "\u0417\u0430\u043f\u0430\u0434\u043d\u0430\u044f \u0421\u0430\u0445\u0430\u0440\u0430", "El Aai\u00fan", "Africa", "Northern Africa"],
+  ["ZW", "\u0417\u0438\u043c\u0431\u0430\u0431\u0432\u0435", "Harare", "Africa", "Eastern Africa"],
+  ["YE", "\u0419\u0435\u043c\u0435\u043d", "Sana'a", "Asia", "Western Asia"],
+  ["IL", "\u0418\u0437\u0440\u0430\u0438\u043b\u044c", "Jerusalem", "Asia", "Western Asia"],
+  ["IN", "\u0418\u043d\u0434\u0438\u044f", "New Delhi", "Asia", "Southern Asia"],
+  ["ID", "\u0418\u043d\u0434\u043e\u043d\u0435\u0437\u0438\u044f", "Jakarta", "Asia", "South-Eastern Asia"],
+  ["JO", "\u0418\u043e\u0440\u0434\u0430\u043d\u0438\u044f", "Amman", "Asia", "Western Asia"],
+  ["IQ", "\u0418\u0440\u0430\u043a", "Baghdad", "Asia", "Western Asia"],
+  ["IR", "\u0418\u0440\u0430\u043d", "Tehran", "Asia", "Southern Asia"],
+  ["IE", "\u0418\u0440\u043b\u0430\u043d\u0434\u0438\u044f", "Dublin", "Europe", "Northern Europe"],
+  ["IS", "\u0418\u0441\u043b\u0430\u043d\u0434\u0438\u044f", "Reykjavik", "Europe", "Northern Europe"],
+  ["ES", "\u0418\u0441\u043f\u0430\u043d\u0438\u044f", "Madrid", "Europe", "Southern Europe"],
+  ["IT", "\u0418\u0442\u0430\u043b\u0438\u044f", "Rome", "Europe", "Southern Europe"],
+  ["CV", "\u041a\u0430\u0431\u043e-\u0412\u0435\u0440\u0434\u0435", "Praia", "Africa", "Western Africa"],
+  ["KZ", "\u041a\u0430\u0437\u0430\u0445\u0441\u0442\u0430\u043d", "Astana", "Asia", "Central Asia"],
+  ["KY", "\u041a\u0430\u0439\u043c\u0430\u043d\u043e\u0432\u044b \u043e\u0441\u0442\u0440\u043e\u0432\u0430", "George Town", "Americas", "Caribbean"],
+  ["KH", "\u041a\u0430\u043c\u0431\u043e\u0434\u0436\u0430", "Phnom Penh", "Asia", "South-Eastern Asia"],
+  ["CM", "\u041a\u0430\u043c\u0435\u0440\u0443\u043d", "Yaound\u00e9", "Africa", "Middle Africa"],
+  ["CA", "\u041a\u0430\u043d\u0430\u0434\u0430", "Ottawa", "Americas", "North America"],
+  ["BQ", "\u041a\u0430\u0440\u0438\u0431\u0441\u043a\u0438\u0435 \u041d\u0438\u0434\u0435\u0440\u043b\u0430\u043d\u0434\u044b", "Kralendijk", "Americas", "Caribbean"],
+  ["QA", "\u041a\u0430\u0442\u0430\u0440", "Doha", "Asia", "Western Asia"],
+  ["KE", "\u041a\u0435\u043d\u0438\u044f", "Nairobi", "Africa", "Eastern Africa"],
+  ["CY", "\u041a\u0438\u043f\u0440", "Nicosia", "Europe", "Southern Europe"],
+  ["KG", "\u041a\u0438\u0440\u0433\u0438\u0437\u0438\u044f", "Bishkek", "Asia", "Central Asia"],
+  ["KI", "\u041a\u0438\u0440\u0438\u0431\u0430\u0442\u0438", "South Tarawa", "Oceania", "Micronesia"],
+  ["CN", "\u041a\u0438\u0442\u0430\u0439", "Beijing", "Asia", "Eastern Asia"],
+  ["CC", "\u041a\u043e\u043a\u043e\u0441\u043e\u0432\u044b\u0435 \u043e\u0441\u0442\u0440\u043e\u0432\u0430", "West Island", "Oceania", "Australia and New Zealand"],
+  ["CO", "\u041a\u043e\u043b\u0443\u043c\u0431\u0438\u044f", "Bogot\u00e1", "Americas", "South America"],
+  ["KM", "\u041a\u043e\u043c\u043e\u0440\u044b", "Moroni", "Africa", "Eastern Africa"],
+  ["CR", "\u041a\u043e\u0441\u0442\u0430-\u0420\u0438\u043a\u0430", "San Jos\u00e9", "Americas", "Central America"],
+  ["CI", "\u041a\u043e\u0442-\u0434\u2019\u0418\u0432\u0443\u0430\u0440", "Yamoussoukro", "Africa", "Western Africa"],
+  ["CU", "\u041a\u0443\u0431\u0430", "Havana", "Americas", "Caribbean"],
+  ["KW", "\u041a\u0443\u0432\u0435\u0439\u0442", "Kuwait City", "Asia", "Western Asia"],
+  ["CW", "\u041a\u044e\u0440\u0430\u0441\u0430\u043e", "Willemstad", "Americas", "Caribbean"],
+  ["LA", "\u041b\u0430\u043e\u0441", "Vientiane", "Asia", "South-Eastern Asia"],
+  ["LV", "\u041b\u0430\u0442\u0432\u0438\u044f", "Riga", "Europe", "Northern Europe"],
+  ["LS", "\u041b\u0435\u0441\u043e\u0442\u043e", "Maseru", "Africa", "Southern Africa"],
+  ["LR", "\u041b\u0438\u0431\u0435\u0440\u0438\u044f", "Monrovia", "Africa", "Western Africa"],
+  ["LB", "\u041b\u0438\u0432\u0430\u043d", "Beirut", "Asia", "Western Asia"],
+  ["LY", "\u041b\u0438\u0432\u0438\u044f", "Tripoli", "Africa", "Northern Africa"],
+  ["LT", "\u041b\u0438\u0442\u0432\u0430", "Vilnius", "Europe", "Northern Europe"],
+  ["LI", "\u041b\u0438\u0445\u0442\u0435\u043d\u0448\u0442\u0435\u0439\u043d", "Vaduz", "Europe", "Western Europe"],
+  ["LU", "\u041b\u044e\u043a\u0441\u0435\u043c\u0431\u0443\u0440\u0433", "Luxembourg", "Europe", "Western Europe"],
+  ["MU", "\u041c\u0430\u0432\u0440\u0438\u043a\u0438\u0439", "Port Louis", "Africa", "Eastern Africa"],
+  ["MR", "\u041c\u0430\u0432\u0440\u0438\u0442\u0430\u043d\u0438\u044f", "Nouakchott", "Africa", "Western Africa"],
+  ["MG", "\u041c\u0430\u0434\u0430\u0433\u0430\u0441\u043a\u0430\u0440", "Antananarivo", "Africa", "Eastern Africa"],
+  ["YT", "\u041c\u0430\u0439\u043e\u0442\u0442\u0430", "Mamoudzou", "Africa", "Eastern Africa"],
+  ["MO", "\u041c\u0430\u043a\u0430\u043e", "\u041c\u0430\u043a\u0430\u043e", "Asia", "Eastern Asia"],
+  ["MW", "\u041c\u0430\u043b\u0430\u0432\u0438", "Lilongwe", "Africa", "Eastern Africa"],
+  ["MY", "\u041c\u0430\u043b\u0430\u0439\u0437\u0438\u044f", "Kuala Lumpur", "Asia", "South-Eastern Asia"],
+  ["ML", "\u041c\u0430\u043b\u0438", "Bamako", "Africa", "Western Africa"],
+  ["MV", "\u041c\u0430\u043b\u044c\u0434\u0438\u0432\u044b", "Mal\u00e9", "Asia", "Southern Asia"],
+  ["MT", "\u041c\u0430\u043b\u044c\u0442\u0430", "Valletta", "Europe", "Southern Europe"],
+  ["MA", "\u041c\u0430\u0440\u043e\u043a\u043a\u043e", "Rabat", "Africa", "Northern Africa"],
+  ["MQ", "\u041c\u0430\u0440\u0442\u0438\u043d\u0438\u043a\u0430", "Fort-de-France", "Americas", "Caribbean"],
+  ["MH", "\u041c\u0430\u0440\u0448\u0430\u043b\u043b\u043e\u0432\u044b \u041e\u0441\u0442\u0440\u043e\u0432\u0430", "Majuro", "Oceania", "Micronesia"],
+  ["MX", "\u041c\u0435\u043a\u0441\u0438\u043a\u0430", "Mexico City", "Americas", "North America"],
+  ["MZ", "\u041c\u043e\u0437\u0430\u043c\u0431\u0438\u043a", "Maputo", "Africa", "Eastern Africa"],
+  ["MD", "\u041c\u043e\u043b\u0434\u0430\u0432\u0438\u044f", "Chi\u0219in\u0103u", "Europe", "Eastern Europe"],
+  ["MC", "\u041c\u043e\u043d\u0430\u043a\u043e", "Monaco", "Europe", "Western Europe"],
+  ["MN", "\u041c\u043e\u043d\u0433\u043e\u043b\u0438\u044f", "Ulan Bator", "Asia", "Eastern Asia"],
+  ["MS", "\u041c\u043e\u043d\u0442\u0441\u0435\u0440\u0440\u0430\u0442", "Plymouth", "Americas", "Caribbean"],
+  ["MM", "\u041c\u044c\u044f\u043d\u043c\u0430", "Naypyidaw", "Asia", "South-Eastern Asia"],
+  ["NA", "\u041d\u0430\u043c\u0438\u0431\u0438\u044f", "Windhoek", "Africa", "Southern Africa"],
+  ["NR", "\u041d\u0430\u0443\u0440\u0443", "Yaren", "Oceania", "Micronesia"],
+  ["NP", "\u041d\u0435\u043f\u0430\u043b", "Kathmandu", "Asia", "Southern Asia"],
+  ["NE", "\u041d\u0438\u0433\u0435\u0440", "Niamey", "Africa", "Western Africa"],
+  ["NG", "\u041d\u0438\u0433\u0435\u0440\u0438\u044f", "Abuja", "Africa", "Western Africa"],
+  ["NL", "\u041d\u0438\u0434\u0435\u0440\u043b\u0430\u043d\u0434\u044b", "Amsterdam", "Europe", "Western Europe"],
+  ["NI", "\u041d\u0438\u043a\u0430\u0440\u0430\u0433\u0443\u0430", "Managua", "Americas", "Central America"],
+  ["NU", "\u041d\u0438\u0443\u044d", "Alofi", "Oceania", "Polynesia"],
+  ["NZ", "\u041d\u043e\u0432\u0430\u044f \u0417\u0435\u043b\u0430\u043d\u0434\u0438\u044f", "Wellington", "Oceania", "Australia and New Zealand"],
+  ["NC", "\u041d\u043e\u0432\u0430\u044f \u041a\u0430\u043b\u0435\u0434\u043e\u043d\u0438\u044f", "Noum\u00e9a", "Oceania", "Melanesia"],
+  ["NO", "\u041d\u043e\u0440\u0432\u0435\u0433\u0438\u044f", "Oslo", "Europe", "Northern Europe"],
+  ["NF", "\u041d\u043e\u0440\u0444\u043e\u043b\u043a", "Kingston", "Oceania", "Australia and New Zealand"],
+  ["AE", "\u041e\u0431\u044a\u0435\u0434\u0438\u043d\u0451\u043d\u043d\u044b\u0435 \u0410\u0440\u0430\u0431\u0441\u043a\u0438\u0435 \u042d\u043c\u0438\u0440\u0430\u0442\u044b", "Abu Dhabi", "Asia", "Western Asia"],
+  ["OM", "\u041e\u043c\u0430\u043d", "Muscat", "Asia", "Western Asia"],
+  ["BV", "\u041e\u0441\u0442\u0440\u043e\u0432 \u0411\u0443\u0432\u0435", "\u041e\u0441\u0442\u0440\u043e\u0432 \u0411\u0443\u0432\u0435", "Antarctic", ""],
+  ["IM", "\u041e\u0441\u0442\u0440\u043e\u0432 \u041c\u044d\u043d", "Douglas", "Europe", "Northern Europe"],
+  ["CX", "\u041e\u0441\u0442\u0440\u043e\u0432 \u0420\u043e\u0436\u0434\u0435\u0441\u0442\u0432\u0430", "Flying Fish Cove", "Oceania", "Australia and New Zealand"],
+  ["HM", "\u041e\u0441\u0442\u0440\u043e\u0432 \u0425\u0435\u0440\u0434 \u0438 \u043e\u0441\u0442\u0440\u043e\u0432\u0430 \u041c\u0430\u043a\u0434\u043e\u043d\u0430\u043b\u044c\u0434", "\u041e\u0441\u0442\u0440\u043e\u0432 \u0425\u0435\u0440\u0434 \u0438 \u043e\u0441\u0442\u0440\u043e\u0432\u0430 \u041c\u0430\u043a\u0434\u043e\u043d\u0430\u043b\u044c\u0434", "Antarctic", ""],
+  ["CK", "\u041e\u0441\u0442\u0440\u043e\u0432\u0430 \u041a\u0443\u043a\u0430", "Avarua", "Oceania", "Polynesia"],
+  ["PN", "\u041e\u0441\u0442\u0440\u043e\u0432\u0430 \u041f\u0438\u0442\u043a\u044d\u0440\u043d", "Adamstown", "Oceania", "Polynesia"],
+  ["SH", "\u041e\u0441\u0442\u0440\u043e\u0432\u0430 \u0421\u0432\u044f\u0442\u043e\u0439 \u0415\u043b\u0435\u043d\u044b, \u0412\u043e\u0437\u043d\u0435\u0441\u0435\u043d\u0438\u044f \u0438 \u0422\u0440\u0438\u0441\u0442\u0430\u043d-\u0434\u0430-\u041a\u0443\u043d\u044c\u044f", "Jamestown", "Africa", "Western Africa"],
+  ["PK", "\u041f\u0430\u043a\u0438\u0441\u0442\u0430\u043d", "Islamabad", "Asia", "Southern Asia"],
+  ["PW", "\u041f\u0430\u043b\u0430\u0443", "Ngerulmud", "Oceania", "Micronesia"],
+  ["PS", "\u041f\u0430\u043b\u0435\u0441\u0442\u0438\u043d\u0430", "Ramallah", "Asia", "Western Asia"],
+  ["PA", "\u041f\u0430\u043d\u0430\u043c\u0430", "Panama City", "Americas", "Central America"],
+  ["PG", "\u041f\u0430\u043f\u0443\u0430 \u2014 \u041d\u043e\u0432\u0430\u044f \u0413\u0432\u0438\u043d\u0435\u044f", "Port Moresby", "Oceania", "Melanesia"],
+  ["PY", "\u041f\u0430\u0440\u0430\u0433\u0432\u0430\u0439", "Asunci\u00f3n", "Americas", "South America"],
+  ["PE", "\u041f\u0435\u0440\u0443", "Lima", "Americas", "South America"],
+  ["PL", "\u041f\u043e\u043b\u044c\u0448\u0430", "Warsaw", "Europe", "Central Europe"],
+  ["PT", "\u041f\u043e\u0440\u0442\u0443\u0433\u0430\u043b\u0438\u044f", "Lisbon", "Europe", "Southern Europe"],
+  ["PR", "\u041f\u0443\u044d\u0440\u0442\u043e-\u0420\u0438\u043a\u043e", "San Juan", "Americas", "Caribbean"],
+  ["CG", "\u0420\u0435\u0441\u043f\u0443\u0431\u043b\u0438\u043a\u0430 \u041a\u043e\u043d\u0433\u043e", "Brazzaville", "Africa", "Middle Africa"],
+  ["XK", "\u0420\u0435\u0441\u043f\u0443\u0431\u043b\u0438\u043a\u0430 \u041a\u043e\u0441\u043e\u0432\u043e", "Pristina", "Europe", "Southeast Europe"],
+  ["RE", "\u0420\u0435\u044e\u043d\u044c\u043e\u043d", "Saint-Denis", "Africa", "Eastern Africa"],
+  ["RU", "\u0420\u043e\u0441\u0441\u0438\u044f", "Moscow", "Europe", "Eastern Europe"],
+  ["RW", "\u0420\u0443\u0430\u043d\u0434\u0430", "Kigali", "Africa", "Eastern Africa"],
+  ["RO", "\u0420\u0443\u043c\u044b\u043d\u0438\u044f", "Bucharest", "Europe", "Southeast Europe"],
+  ["SV", "\u0421\u0430\u043b\u044c\u0432\u0430\u0434\u043e\u0440", "San Salvador", "Americas", "Central America"],
+  ["WS", "\u0421\u0430\u043c\u043e\u0430", "Apia", "Oceania", "Polynesia"],
+  ["SM", "\u0421\u0430\u043d-\u041c\u0430\u0440\u0438\u043d\u043e", "City of San Marino", "Europe", "Southern Europe"],
+  ["ST", "\u0421\u0430\u043d-\u0422\u043e\u043c\u0435 \u0438 \u041f\u0440\u0438\u043d\u0441\u0438\u043f\u0438", "S\u00e3o Tom\u00e9", "Africa", "Middle Africa"],
+  ["SA", "\u0421\u0430\u0443\u0434\u043e\u0432\u0441\u043a\u0430\u044f \u0410\u0440\u0430\u0432\u0438\u044f", "Riyadh", "Asia", "Western Asia"],
+  ["SZ", "\u0421\u0432\u0430\u0437\u0438\u043b\u0435\u043d\u0434", "Lobamba", "Africa", "Southern Africa"],
+  ["KP", "\u0421\u0435\u0432\u0435\u0440\u043d\u0430\u044f \u041a\u043e\u0440\u0435\u044f", "Pyongyang", "Asia", "Eastern Asia"],
+  ["MK", "\u0421\u0435\u0432\u0435\u0440\u043d\u0430\u044f \u041c\u0430\u043a\u0435\u0434\u043e\u043d\u0438\u044f", "Skopje", "Europe", "Southeast Europe"],
+  ["MP", "\u0421\u0435\u0432\u0435\u0440\u043d\u044b\u0435 \u041c\u0430\u0440\u0438\u0430\u043d\u0441\u043a\u0438\u0435 \u043e\u0441\u0442\u0440\u043e\u0432\u0430", "Saipan", "Oceania", "Micronesia"],
+  ["SC", "\u0421\u0435\u0439\u0448\u0435\u043b\u044c\u0441\u043a\u0438\u0435 \u041e\u0441\u0442\u0440\u043e\u0432\u0430", "Victoria", "Africa", "Eastern Africa"],
+  ["BL", "\u0421\u0435\u043d-\u0411\u0430\u0440\u0442\u0435\u043b\u0435\u043c\u0438", "Gustavia", "Americas", "Caribbean"],
+  ["SN", "\u0421\u0435\u043d\u0435\u0433\u0430\u043b", "Dakar", "Africa", "Western Africa"],
+  ["MF", "\u0421\u0435\u043d-\u041c\u0430\u0440\u0442\u0435\u043d", "Marigot", "Americas", "Caribbean"],
+  ["PM", "\u0421\u0435\u043d-\u041f\u044c\u0435\u0440 \u0438 \u041c\u0438\u043a\u0435\u043b\u043e\u043d", "Saint-Pierre", "Americas", "North America"],
+  ["VC", "\u0421\u0435\u043d\u0442-\u0412\u0438\u043d\u0441\u0435\u043d\u0442 \u0438 \u0413\u0440\u0435\u043d\u0430\u0434\u0438\u043d\u044b", "Kingstown", "Americas", "Caribbean"],
+  ["KN", "\u0421\u0435\u043d\u0442-\u041a\u0438\u0442\u0441 \u0438 \u041d\u0435\u0432\u0438\u0441", "Basseterre", "Americas", "Caribbean"],
+  ["LC", "\u0421\u0435\u043d\u0442-\u041b\u044e\u0441\u0438\u044f", "Castries", "Americas", "Caribbean"],
+  ["RS", "\u0421\u0435\u0440\u0431\u0438\u044f", "Belgrade", "Europe", "Southeast Europe"],
+  ["SG", "\u0421\u0438\u043d\u0433\u0430\u043f\u0443\u0440", "Singapore", "Asia", "South-Eastern Asia"],
+  ["SX", "\u0421\u0438\u043d\u0442-\u041c\u0430\u0440\u0442\u0435\u043d", "Philipsburg", "Americas", "Caribbean"],
+  ["SY", "\u0421\u0438\u0440\u0438\u044f", "Damascus", "Asia", "Western Asia"],
+  ["SK", "\u0421\u043b\u043e\u0432\u0430\u043a\u0438\u044f", "Bratislava", "Europe", "Central Europe"],
+  ["SI", "\u0421\u043b\u043e\u0432\u0435\u043d\u0438\u044f", "Ljubljana", "Europe", "Central Europe"],
+  ["US", "\u0421\u043e\u0435\u0434\u0438\u043d\u0451\u043d\u043d\u044b\u0435 \u0428\u0442\u0430\u0442\u044b \u0410\u043c\u0435\u0440\u0438\u043a\u0438", "Washington D.C.", "Americas", "North America"],
+  ["SB", "\u0421\u043e\u043b\u043e\u043c\u043e\u043d\u043e\u0432\u044b \u041e\u0441\u0442\u0440\u043e\u0432\u0430", "Honiara", "Oceania", "Melanesia"],
+  ["SO", "\u0421\u043e\u043c\u0430\u043b\u0438", "Mogadishu", "Africa", "Eastern Africa"],
+  ["SD", "\u0421\u0443\u0434\u0430\u043d", "Khartoum", "Africa", "Northern Africa"],
+  ["SR", "\u0421\u0443\u0440\u0438\u043d\u0430\u043c", "Paramaribo", "Americas", "South America"],
+  ["SL", "\u0421\u044c\u0435\u0440\u0440\u0430-\u041b\u0435\u043e\u043d\u0435", "Freetown", "Africa", "Western Africa"],
+  ["TJ", "\u0422\u0430\u0434\u0436\u0438\u043a\u0438\u0441\u0442\u0430\u043d", "Dushanbe", "Asia", "Central Asia"],
+  ["TW", "\u0422\u0430\u0439\u0432\u0430\u043d\u044c", "Taipei", "Asia", "Eastern Asia"],
+  ["TH", "\u0422\u0430\u0438\u043b\u0430\u043d\u0434", "Bangkok", "Asia", "South-Eastern Asia"],
+  ["TZ", "\u0422\u0430\u043d\u0437\u0430\u043d\u0438\u044f", "Dodoma", "Africa", "Eastern Africa"],
+  ["TC", "\u0422\u0435\u0440\u043a\u0441 \u0438 \u041a\u0430\u0439\u043a\u043e\u0441", "Cockburn Town", "Americas", "Caribbean"],
+  ["TG", "\u0422\u043e\u0433\u043e", "Lom\u00e9", "Africa", "Western Africa"],
+  ["TK", "\u0422\u043e\u043a\u0435\u043b\u0430\u0443", "Fakaofo", "Oceania", "Polynesia"],
+  ["TO", "\u0422\u043e\u043d\u0433\u0430", "Nuku'alofa", "Oceania", "Polynesia"],
+  ["TT", "\u0422\u0440\u0438\u043d\u0438\u0434\u0430\u0434 \u0438 \u0422\u043e\u0431\u0430\u0433\u043e", "Port of Spain", "Americas", "Caribbean"],
+  ["TV", "\u0422\u0443\u0432\u0430\u043b\u0443", "Funafuti", "Oceania", "Polynesia"],
+  ["TN", "\u0422\u0443\u043d\u0438\u0441", "Tunis", "Africa", "Northern Africa"],
+  ["TM", "\u0422\u0443\u0440\u043a\u043c\u0435\u043d\u0438\u044f", "Ashgabat", "Asia", "Central Asia"],
+  ["TR", "\u0422\u0443\u0440\u0446\u0438\u044f", "Ankara", "Asia", "Western Asia"],
+  ["UG", "\u0423\u0433\u0430\u043d\u0434\u0430", "Kampala", "Africa", "Eastern Africa"],
+  ["UZ", "\u0423\u0437\u0431\u0435\u043a\u0438\u0441\u0442\u0430\u043d", "Tashkent", "Asia", "Central Asia"],
+  ["UA", "\u0423\u043a\u0440\u0430\u0438\u043d\u0430", "Kyiv", "Europe", "Eastern Europe"],
+  ["WF", "\u0423\u043e\u043b\u043b\u0438\u0441 \u0438 \u0424\u0443\u0442\u0443\u043d\u0430", "Mata-Utu", "Oceania", "Polynesia"],
+  ["UY", "\u0423\u0440\u0443\u0433\u0432\u0430\u0439", "Montevideo", "Americas", "South America"],
+  ["FO", "\u0424\u0430\u0440\u0435\u0440\u0441\u043a\u0438\u0435 \u043e\u0441\u0442\u0440\u043e\u0432\u0430", "T\u00f3rshavn", "Europe", "Northern Europe"],
+  ["FM", "\u0424\u0435\u0434\u0435\u0440\u0430\u0442\u0438\u0432\u043d\u044b\u0435 \u0428\u0442\u0430\u0442\u044b \u041c\u0438\u043a\u0440\u043e\u043d\u0435\u0437\u0438\u0438", "Palikir", "Oceania", "Micronesia"],
+  ["FJ", "\u0424\u0438\u0434\u0436\u0438", "Suva", "Oceania", "Melanesia"],
+  ["PH", "\u0424\u0438\u043b\u0438\u043f\u043f\u0438\u043d\u044b", "Manila", "Asia", "South-Eastern Asia"],
+  ["FI", "\u0424\u0438\u043d\u043b\u044f\u043d\u0434\u0438\u044f", "Helsinki", "Europe", "Northern Europe"],
+  ["FK", "\u0424\u043e\u043b\u043a\u043b\u0435\u043d\u0434\u0441\u043a\u0438\u0435 \u043e\u0441\u0442\u0440\u043e\u0432\u0430", "Stanley", "Americas", "South America"],
+  ["FR", "\u0424\u0440\u0430\u043d\u0446\u0438\u044f", "Paris", "Europe", "Western Europe"],
+  ["GF", "\u0424\u0440\u0430\u043d\u0446\u0443\u0437\u0441\u043a\u0430\u044f \u0413\u0432\u0438\u0430\u043d\u0430", "Cayenne", "Americas", "South America"],
+  ["PF", "\u0424\u0440\u0430\u043d\u0446\u0443\u0437\u0441\u043a\u0430\u044f \u041f\u043e\u043b\u0438\u043d\u0435\u0437\u0438\u044f", "Papeet\u0113", "Oceania", "Polynesia"],
+  ["TF", "\u0424\u0440\u0430\u043d\u0446\u0443\u0437\u0441\u043a\u0438\u0435 \u042e\u0436\u043d\u044b\u0435 \u0438 \u0410\u043d\u0442\u0430\u0440\u043a\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0442\u0435\u0440\u0440\u0438\u0442\u043e\u0440\u0438\u0438", "Port-aux-Fran\u00e7ais", "Antarctic", ""],
+  ["HR", "\u0425\u043e\u0440\u0432\u0430\u0442\u0438\u044f", "Zagreb", "Europe", "Southeast Europe"],
+  ["CF", "\u0426\u0435\u043d\u0442\u0440\u0430\u043b\u044c\u043d\u043e\u0430\u0444\u0440\u0438\u043a\u0430\u043d\u0441\u043a\u0430\u044f \u0420\u0435\u0441\u043f\u0443\u0431\u043b\u0438\u043a\u0430", "Bangui", "Africa", "Middle Africa"],
+  ["TD", "\u0427\u0430\u0434", "N'Djamena", "Africa", "Middle Africa"],
+  ["ME", "\u0427\u0435\u0440\u043d\u043e\u0433\u043e\u0440\u0438\u044f", "Podgorica", "Europe", "Southeast Europe"],
+  ["CZ", "\u0427\u0435\u0445\u0438\u044f", "Prague", "Europe", "Central Europe"],
+  ["CL", "\u0427\u0438\u043b\u0438", "Santiago", "Americas", "South America"],
+  ["CH", "\u0428\u0432\u0435\u0439\u0446\u0430\u0440\u0438\u044f", "Bern", "Europe", "Western Europe"],
+  ["SE", "\u0428\u0432\u0435\u0446\u0438\u044f", "Stockholm", "Europe", "Northern Europe"],
+  ["SJ", "\u0428\u043f\u0438\u0446\u0431\u0435\u0440\u0433\u0435\u043d \u0438 \u042f\u043d-\u041c\u0430\u0439\u0435\u043d", "Longyearbyen", "Europe", "Northern Europe"],
+  ["LK", "\u0428\u0440\u0438-\u041b\u0430\u043d\u043a\u0430", "Colombo", "Asia", "Southern Asia"],
+  ["EC", "\u042d\u043a\u0432\u0430\u0434\u043e\u0440", "Quito", "Americas", "South America"],
+  ["GQ", "\u042d\u043a\u0432\u0430\u0442\u043e\u0440\u0438\u0430\u043b\u044c\u043d\u0430\u044f \u0413\u0432\u0438\u043d\u0435\u044f", "Malabo", "Africa", "Middle Africa"],
+  ["ER", "\u042d\u0440\u0438\u0442\u0440\u0435\u044f", "Asmara", "Africa", "Eastern Africa"],
+  ["EE", "\u042d\u0441\u0442\u043e\u043d\u0438\u044f", "Tallinn", "Europe", "Northern Europe"],
+  ["ET", "\u042d\u0444\u0438\u043e\u043f\u0438\u044f", "Addis Ababa", "Africa", "Eastern Africa"],
+  ["GS", "\u042e\u0436\u043d\u0430\u044f \u0413\u0435\u043e\u0440\u0433\u0438\u044f \u0438 \u042e\u0436\u043d\u044b\u0435 \u0421\u0430\u043d\u0434\u0432\u0438\u0447\u0435\u0432\u044b \u043e\u0441\u0442\u0440\u043e\u0432\u0430", "King Edward Point", "Antarctic", ""],
+  ["KR", "\u042e\u0436\u043d\u0430\u044f \u041a\u043e\u0440\u0435\u044f", "Seoul", "Asia", "Eastern Asia"],
+  ["ZA", "\u042e\u0436\u043d\u043e-\u0410\u0444\u0440\u0438\u043a\u0430\u043d\u0441\u043a\u0430\u044f \u0420\u0435\u0441\u043f\u0443\u0431\u043b\u0438\u043a\u0430", "Pretoria", "Africa", "Southern Africa"],
+  ["SS", "\u042e\u0436\u043d\u044b\u0439 \u0421\u0443\u0434\u0430\u043d", "Juba", "Africa", "Middle Africa"],
+  ["JM", "\u042f\u043c\u0430\u0439\u043a\u0430", "Kingston", "Americas", "Caribbean"],
+  ["JP", "\u042f\u043f\u043e\u043d\u0438\u044f", "Tokyo", "Asia", "Eastern Asia"],
+];
 
 function flagFromCountryCode(code) {
   return code
@@ -411,10 +607,34 @@ function mapCountryToFlagRegion(regionRaw = "", subregionRaw = "") {
   if (region === "antarctic") return "antarctica";
   if (region === "americas") {
     if (subregion.includes("south")) return "southAmerica";
+    if (subregion.includes("central")) return "centralAmerica";
+    if (subregion.includes("caribbean")) return "caribbean";
     return "northAmerica";
   }
   return "world";
 }
+
+function buildFlagMoodRegions(rows) {
+  const buckets = Object.fromEntries(Object.keys(flagMoodRegionLabels).map((key) => [key, []]));
+  rows.forEach(([code, country, capital, region, subregion]) => {
+    if (!/^[A-Z]{2}$/.test(code) || !country) return;
+    const row = { flag: flagFromCountryCode(code), country, capital: capital || country };
+    const key = mapCountryToFlagRegion(region || "", subregion || "");
+    buckets.world.push(row);
+    if (buckets[key]) buckets[key].push(row);
+  });
+  Object.values(buckets).forEach((list) => list.sort((a, b) => a.country.localeCompare(b.country, "ru")));
+  const result = {};
+  Object.entries(buckets).forEach(([key, countries]) => {
+    if (countries.length >= 4) {
+      result[key] = { label: `${flagMoodRegionLabels[key]} (${countries.length})`, countries };
+    }
+  });
+  return result;
+}
+
+let flagMoodRegions = buildFlagMoodRegions(flagMoodFallbackRows);
+let flagMoodLoaded = false;
 
 async function loadFlagMoodCountries() {
   if (flagMoodLoaded) return;
@@ -423,7 +643,7 @@ async function loadFlagMoodCountries() {
     const cachedRaw = localStorage.getItem(FLAG_MOOD_CACHE_KEY);
     if (cachedRaw) {
       const cached = JSON.parse(cachedRaw);
-      if (cached && typeof cached === "object" && cached.world?.countries?.length >= 150) {
+      if (cached && typeof cached === "object" && cached.world?.countries?.length >= flagMoodFallbackRows.length) {
         flagMoodRegions = cached;
       }
     }
@@ -436,16 +656,7 @@ async function loadFlagMoodCountries() {
     const response = await fetch("https://restcountries.com/v3.1/all?fields=cca2,capital,region,subregion,name,translations");
     if (!response.ok) return;
     const payload = await response.json();
-    const buckets = {
-      world: [],
-      europe: [],
-      asia: [],
-      africa: [],
-      northAmerica: [],
-      southAmerica: [],
-      oceania: [],
-      antarctica: [],
-    };
+    const onlineRows = [];
     const used = new Set();
     payload.forEach((item) => {
       const code = String(item.cca2 || "").toUpperCase();
@@ -458,23 +669,12 @@ async function loadFlagMoodCountries() {
         || code;
       if (!country || country === code) return;
       const capital = Array.isArray(item.capital) && item.capital[0] ? item.capital[0] : country;
-      const row = { flag: flagFromCountryCode(code), country, capital };
-      const key = mapCountryToFlagRegion(item.region || "", item.subregion || "");
-      buckets.world.push(row);
-      if (buckets[key]) buckets[key].push(row);
+      onlineRows.push([code, country, capital, item.region || "", item.subregion || ""]);
     });
-    Object.values(buckets).forEach((list) => list.sort((a, b) => a.country.localeCompare(b.country, "ru")));
-    if (buckets.world.length >= 150) {
-      const result = {};
-      Object.entries(buckets).forEach(([key, countries]) => {
-        if (countries.length >= 4) {
-          const labelBase = flagMoodRegionLabels[key] || key;
-          result[key] = { label: `${labelBase} (${countries.length})`, countries };
-        }
-      });
-      flagMoodRegions = result;
+    if (onlineRows.length >= flagMoodFallbackRows.length) {
+      flagMoodRegions = buildFlagMoodRegions(onlineRows);
       try {
-        localStorage.setItem(FLAG_MOOD_CACHE_KEY, JSON.stringify(result));
+        localStorage.setItem(FLAG_MOOD_CACHE_KEY, JSON.stringify(flagMoodRegions));
       } catch {}
     }
   } catch {}
@@ -657,7 +857,7 @@ function openApp() {
 
 function setupServiceWorker() {
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("sw.js?v=14").catch(() => {});
+    navigator.serviceWorker.register("sw.js?v=16").catch(() => {});
   }
 }
 
@@ -3123,6 +3323,7 @@ function drawNonMathSetup(game) {
   });
   $("#flagRegionSelect")?.addEventListener("change", (event) => {
     nonMathGameState.region = event.target.value;
+    drawNonMathSetup(game);
   });
   $("#flagModeSelect")?.addEventListener("change", (event) => {
     nonMathGameState.flagMode = event.target.value;

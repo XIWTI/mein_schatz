@@ -1,9 +1,9 @@
-const CACHE_NAME = "love-arcade-v14";
+const CACHE_NAME = "love-arcade-v16";
 const ASSETS = [
   ".",
   "index.html",
   "styles.css?v=14",
-  "app.js?v=14",
+  "app.js?v=16",
   "manifest.json",
   "icons/love-icon.svg",
   "music/Mrs Magic - Strawberry Guy.mp3",
